@@ -32,8 +32,8 @@ class SimpleGridEnvironment:
                     (i, j) != self.goal:
                     self.valid_start_positions.append((i, j))
         
-        print("##### START STATESSS #####")
-        print(self.valid_start_positions)
+        # print("##### START STATESSS #####")
+        # print(self.valid_start_positions)
         
         # if goal in self.valid_start_positions:
         #     # print(f"removing {goal} from start positions")

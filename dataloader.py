@@ -22,8 +22,6 @@ ACTIONS = {0:[0, 0, 0, 1],
 '''
 Data is of the format : [(state, action, next_state), (state, action, next_state), ...]
 
-TODO
-- Convert to Batched data
 '''
 
 TRAJECTORIES = 1000
@@ -84,7 +82,7 @@ def batch_data(dataset, batch_size):
     
     start=0
     while start < len(dataset):
-        print(start)
+        # print(start)
         inputs = []
         outputs = []
 

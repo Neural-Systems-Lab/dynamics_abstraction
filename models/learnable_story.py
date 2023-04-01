@@ -3,39 +3,6 @@ import torch
 import torch.nn.functional as F
 import sys
 
-class ModulatedMatrix(nn.Module):
-    
-    def __init__(self, k, device):
-        super(ModulatedMatrix, self).__init__()
-    
-        self.k = k
-        self.device = device
-        self.input_shape = 15
-        self.output_shape = 11
-        self.temporal_ = nn.Parameter(torch.randn(self.k, \
-                    self.input_shape, self.output_shape, requires_grad=True))
-
-    def single_forward(self, state, action, modulation_weights):
-        input_ = torch.cat((torch.tensor(state), torch.tensor(action)), 0).type(torch.FloatTensor).to(self.device)
-        
-        # Weighted sum of temporal params
-        v_matrix = torch.matmul(modulation_weights, self.temporal_.reshape(self.k, -1))
-        v_matrix = v_matrix.reshape(1, 15, 11)
-        
-        # Next state
-        next_state = F.relu(torch.matmul(input_, v_matrix))
-        
-        return next_state
-
-    def forward(self, inputs, weights):
-        
-        v_matrix = torch.matmul(weights, self.temporal_.reshape(self.k, -1))
-        v_matrix = v_matrix.reshape(self.input_shape, self.output_shape)
-        next_states = F.relu(torch.matmul(inputs, v_matrix))
-        
-        return next_states
-
-
 ###########################################
 # Network with learnable S1 and S2
 ###########################################
@@ -46,6 +13,7 @@ class LearnableStory(nn.Module):
         self.input_units = 16
         self.output_units = 16
         self.device = device
+        self.batch_size = batch_size
         
         # Model params
         self.hypernet = nn.Sequential(
@@ -55,7 +23,7 @@ class LearnableStory(nn.Module):
             nn.ReLU(),
             nn.Linear(64, self.output_units)
         )
-        self.temporal = ModulatedMatrix(self.output_units, device)
+        self.temporal = ModulatedMatrix(self.output_units, device, batch_size)
         
         # Learning rates
         self.infer_lr = 0.1
@@ -64,33 +32,50 @@ class LearnableStory(nn.Module):
         
         # Other vars
         self.infer_max_iter = 10
+        self.l2_lambda = 0.01
 
     ####################
     # Batched functions
     ####################
     
-    def forward(self, batch_trajectory_input, batch_trajectory_output):
+    def forward(self, temporal_batch_input, temporal_batch_output, eval_mode=False):
     
-        errors = torch.zeros(1, requires_grad=True).to(self.device)
+        # errors = torch.zeros(1, requires_grad=True).to(self.device)
+        errors = []
         predicted_states_list = []
+        higher_state_list = []
+        weights_list = []
         higher_state = None
         
-        for timestep in range(len(batch_trajectory_input)):
+        if eval_mode:
+            self.eval_mode = True
+        else:
+            self.eval_mode = False
+        
+        for t in range(len(temporal_batch_input)):
         # for state, action, next_state in trajectory:
             
-            higher_state = self.batch_inference(batch_input, batch_output, higher_state)
+            higher_state = self.batch_inference(temporal_batch_input[t], \
+                            temporal_batch_output[t], higher_state)
             weights = self.hypernet(higher_state)
+            predicted_states = self.temporal(temporal_batch_input[t], weights)
+            errors.append(self.batch_errors(temporal_batch_output[t], predicted_states))
             
-            predicted_states = self.temporal(state, action, weights)
-            next_state = torch.tensor(next_state).type(torch.FloatTensor).to(self.device)    
-            errors += self.prediction_errors(predicted_states, next_state)
-            
-            predicted_states_list.append(predicted_states.detach().cpu().numpy())
-            # losses += loss.detach().cpu().numpy()
-            
-        self.weights_ = weights
-        return errors/len(trajectory), predicted_states_list, higher_state.cpu().numpy()
-
+            if eval_mode:
+                print("saving higher states")
+                predicted_states_list.append(predicted_states.detach().cpu().numpy())
+                higher_state_list.append(torch.squeeze(higher_state).detach().cpu().numpy())
+                weights_list.append(weights.detach().cpu().numpy())
+        
+        errors2 = torch.mean(torch.sum(torch.tensor(errors)))
+        
+        if eval_mode:
+            return errors2.detach().cpu().numpy(), \
+                predicted_states_list, higher_state_list, weights_list
+                
+        # return errors/len(temporal_batch_input)
+        return errors2
+    
     def batch_inference(self, batch_input, batch_output, previous_story=None):
         
         if previous_story == None:
@@ -100,28 +85,41 @@ class LearnableStory(nn.Module):
             story.requires_grad = True
         
         # Is this optimizer definition correct for batched story?
-        infer_optimizer = torch.optim.Adam([story], self.infer_lr)
-        print(story, infer_optimizer)
-        sys.exit(0)
+        infer_optimizer = torch.optim.SGD([story], self.infer_lr)
+        # print(story, infer_optimizer)
         
         for i in range(self.infer_max_iter):
             weights = self.hypernet(story)
+            # print("Weights : ", weights.shape)
+            
             predicted_states = self.temporal(batch_input, weights)
-            loss = self.batch_errors(batch_output, predicted_states)
-        
+            # print("Temporal next states : ", predicted_states.shape)
+            
+            loss = self.batch_errors(batch_output, predicted_states)+\
+                self.l2_lambda * torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)
+
+            if self.eval_mode:
+                print("L2 val : ", torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)\
+                    .detach().cpu().numpy())
+                print("Loss : ", loss.detach().cpu().numpy())
+            
             # Backward - but only update story
             loss.backward()
             infer_optimizer.step()
             infer_optimizer.zero_grad()
             self.zero_grad()
-        
+            # print("backward pass")
+            
         return story.clone().detach()
 
     def batch_errors(self, true, predicted):  
-        return torch.mean(torch.sum(torch.pow(true-predicted, 2), axis=-1), axis=0)
+        err = torch.pow(true-predicted, 2)
+        err = torch.sum(err, axis=-1)
+        err = torch.mean(err, axis=0)
+        return err
     
-    def batch_init_story(self, batch_size):
-        s = torch.zeros((batch_size, self.input_units), requires_grad=True, device=self.device)
+    def batch_init_story(self):
+        s = torch.zeros((self.batch_size, self.input_units), requires_grad=True, device=self.device)
         return s
 
 
@@ -151,7 +149,6 @@ class LearnableStory(nn.Module):
             
         
         self.weights_ = weights
-        
         
         return errors/len(trajectory), predicted_states_list, higher_state.cpu().numpy()
 
@@ -196,5 +193,44 @@ class LearnableStory(nn.Module):
         return s
     
     
+
+##################################
+# Lower Level Transition Model 
+##################################
+
+class ModulatedMatrix(nn.Module):
     
+    def __init__(self, k, device, batch_size):
+        super(ModulatedMatrix, self).__init__()
     
+        self.k = k
+        self.device = device
+        self.batch_size = batch_size
+        self.input_shape = 15
+        self.output_shape = 11
+        self.temporal_ = nn.Parameter(torch.randn(self.k, \
+                    self.input_shape, self.output_shape, requires_grad=True))
+
+    def single_forward(self, state, action, modulation_weights):
+        input_ = torch.cat((torch.tensor(state), torch.tensor(action)), 0).type(torch.FloatTensor).to(self.device)
+        
+        # Weighted sum of temporal params
+        v_matrix = torch.matmul(modulation_weights, self.temporal_.reshape(self.k, -1))
+        v_matrix = v_matrix.reshape(1, 15, 11)
+        
+        # Next state
+        next_state = F.relu(torch.matmul(input_, v_matrix))
+        
+        return next_state
+
+    # Batch forward
+    def forward(self, inputs, weights):
+        
+        v_matrix = torch.matmul(weights, self.temporal_.reshape(self.k, -1))
+        # print("lower transition : ", v_matrix.shape)
+        v_matrix = v_matrix.reshape(self.batch_size, self.input_shape, self.output_shape)
+        inputs = torch.unsqueeze(inputs, 1)
+        # print("Shapes : ", v_matrix.shape, inputs.shape)
+        next_states = F.relu(torch.bmm(inputs, v_matrix))
+        
+        return torch.squeeze(next_states)
