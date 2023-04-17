@@ -21,7 +21,6 @@ ACTIONS = {0:[0, 0, 0, 1],
 
 '''
 Data is of the format : [(state, action, next_state), (state, action, next_state), ...]
-
 '''
 
 TRAJECTORIES = 1000

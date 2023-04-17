@@ -1,7 +1,7 @@
 
 import os
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import sys
 
 import numpy as np
@@ -22,9 +22,10 @@ from models.learnable_story import LearnableStory
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 HYPER_EPOCHS = 100
-BATCH_SIZE = 50
-LOAD_PATH = "../saved_models/mar_31_run_11.state"
-SAVE_PATH = "../saved_models/mar_31_run_11.state"
+BATCH_SIZE = 100
+WARMUP_EPISODES = 100
+LOAD_PATH = "../saved_models/apr_10_run_6.state"
+SAVE_PATH = "../saved_models/apr_10_run_6.state"
 #########################################
 # Training a Hypernet Modulated Network
 #########################################
@@ -74,7 +75,8 @@ for epochs in range(HYPER_EPOCHS):
     
         l1.backward()
         hyper_optim.step()
-        temporal_optim.step()
+        if epochs < WARMUP_EPISODES:    
+            temporal_optim.step()
 
         hyper_optim.zero_grad()
         temporal_optim.zero_grad()
@@ -83,14 +85,16 @@ for epochs in range(HYPER_EPOCHS):
  
         l2.backward()
         hyper_optim.step()
-        temporal_optim.step() 
+        if epochs < WARMUP_EPISODES:  
+            temporal_optim.step() 
         
         print("i = ", i, "loss1 = ", l1.detach().cpu().numpy())
         print("i = ", i, "loss2 = ", l2.detach().cpu().numpy())
         # print("Everything cool inside model train")
         
         epoch_loss.append((l1+l2).detach().cpu().numpy())
-        
+    
+    print("Mean Loss : ", np.mean(epoch_loss))
     train_loss.append(np.mean(epoch_loss))
 
     if epochs % 10 == 0:
