@@ -43,7 +43,8 @@ class LearnableStory(nn.Module):
     
     def forward(self, temporal_batch_input, temporal_batch_output, eval_mode=False):
     
-        errors = torch.zeros(1, requires_grad=True).to(self.device)
+        # errors = torch.zeros(1, requires_grad=True).to(self.device)
+        errors = 0
         # errors = []
         predicted_states_list = []
         higher_state_list = []
@@ -216,8 +217,8 @@ class ModulatedMatrix(nn.Module):
         self.k = k
         self.device = device
         self.batch_size = batch_size
-        self.input_shape = 15
-        self.output_shape = 11
+        self.input_shape = 13
+        self.output_shape = 9
         self.temporal_ = nn.Parameter(torch.randn(self.k, \
                     self.input_shape, self.output_shape, requires_grad=True))
 

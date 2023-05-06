@@ -72,30 +72,43 @@ config2 = {
     "higher_state": [(1, 1)]
 }
 
-abstract_actions = [
-            [0, 0, 0, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 1, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 1, 0, 0, 0],
-            [0, 0, 0, 1, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 0, 0, 0]
-        ]
 
+########################
+# Configs
+########################
 
-composition = np.array([
-    [1, 0, 2, 0, 2],
-    [0, 2, 0, 1, 0],
-    [2, 0, 1, 0, 1]
-])
+c1 = {
+    "id":1,
+    "name": "3 * 3 Grid, Config 1",
+    "rows": 3,
+    "cols": 3,
+    "walls": [(0, 1), (1, 1)],
+}
 
-# composition = np.array([
-#     [1, 0, 2, 0, 1],
-#     [0, 2, 0, 1, 0],
-#     [2, 0, 1, 0, 1],
-#     [0, 1, 0, 2, 0]
-# ])
+c2 = {
+    "id":2,
+    "name": "3 * 3 Grid, Config 2",
+    "rows": 3,
+    "cols": 3,
+    "walls": [(1, 1), (2, 1)],
+}
+
+c3 = {
+    "id":3,
+    "name": "3 * 3 Grid, Config 3",
+    "rows": 3,
+    "cols": 3,
+    "walls": [(1, 0), (1, 1)],
+}
+
+c4 = {
+    "id":4,
+    "name": "3 * 3 Grid, Config 4",
+    "rows": 3,
+    "cols": 3,
+    "walls": [(1, 2), (1, 1)],
+}
+
 
 
 # Network configurations
@@ -114,83 +127,3 @@ lower_level_config = {
     "steps_threshold": 5, # Skip training if num_steps < threshold
     "action_mapping":{0:"up", 1:"down", 2:"left", 3:"right"}
 }
-
-higher_level_config = {
-    "action_net_layers": [64, 128],
-    "higher_input_size": 9,
-    "higher_output_size": 4,
-    "abstract_timestamps": 5,
-    "lr": 1e-3
-}
-
-
-state_net_config = {
-    "output_size":29
-}
-
-'''
-One hot states
-high dim states
-REINFORCE without hypernet
-Check if hypernet works => supervised/imitation learn
-
-'''
-
-# LARGE_SEQUENCE = []
-# for a in range(4):
-#     for b in range(4):
-#         for c in range(4):
-#             for d in range(4):
-#                 for e in range(4):
-#                     LARGE_SEQUENCE.append([a, b, c, d, e])
-
-################################################
-# Hypernet weight intialization techniques
-################################################
-
-
-# class hyperfanin_for_kernel(tf.keras.initializers.Initializer):
-#     def __init__(self,fanin,varin=0.01,relu=True,bias=True):
-#         self.fanin = fanin
-#         self.varin = varin
-#         self.relu = relu
-#         self.bias = bias
-
-#     def __call__(self, shape, dtype=None, **kwargs):
-#         hfanin,_ = shape;
-#         variance = (1/self.varin)*(1/self.fanin)*(1/hfanin)
-
-#         if self.relu:
-#             variance *= 2.0;
-#         if self.bias:
-#             variance /= 2.0;
-        
-#         variance = np.sqrt(3*variance);
-#         # print("VARIANCE : ", variance)
-#         return tf.random.uniform(shape, minval=-variance, maxval=variance)
-#         #return tf.random.normal(shape)*variance
-        
-#     def get_config(self):  # To support serialization
-#         return {"fanin": self.fanin, "varin": self.varin, "relu": self.relu, "bias": self.bias}
-        
-
-
-# class hyperfanin_for_bias(tf.keras.initializers.Initializer):
-#     def __init__(self,varin=1.0,relu=True):
-#         self.varin = varin
-#         self.relu = relu
-
-#     def __call__(self, shape, dtype=None, **kwargs):
-#         hfanin,_ = shape;
-#         variance = (1/2)*(1/self.varin)*(1/hfanin)
-        
-#         if self.relu:
-#             variance *= 2.0;
-        
-#         variance = np.sqrt(3*variance);
-        
-#         return tf.random.uniform(shape, minval=-variance, maxval=variance)
-#         #return tf.random.normal(shape)*variance
-
-#     def get_config(self):  # To support serialization
-#         return {"relu": self.relu, "varin": self.varin}

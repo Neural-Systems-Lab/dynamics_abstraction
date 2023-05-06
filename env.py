@@ -16,8 +16,8 @@ class SimpleGridEnvironment:
     def __init__(self, config, goal, start_states):
         
         # Create the canvas with walls and a single goal state
-        self.rows, self.cols, self.walls, self.valid_goals, self.env_name = \
-            config["rows"], config["cols"], config["walls"], config["goal_states"], config["name"]
+        self.rows, self.cols, self.walls, self.env_name = \
+            config["rows"], config["cols"], config["walls"], config["name"]
 
         self.config = config
         self.board = np.zeros([self.rows, self.cols])
@@ -121,7 +121,7 @@ class SimpleGridEnvironment:
         return self.state
     
     def reward_function(self, state):
-        assert self.goal in self.valid_goals
+        # assert self.goal in self.valid_goals
         
         # Returns reward and termination condition
         # Any transition not to goal gets -1 step reward

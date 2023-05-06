@@ -26,47 +26,29 @@ Data is of the format : [(state, action, next_state), (state, action, next_state
 TRAJECTORIES = 1000
 STEPS = 25
 
+configs = [c1, c2, c3, c4]
+datasets = []
 def get_transitions():
-    dataset1 = []
-    dataset2 = []
 
+    for config in configs:
+        env = SimpleGridEnvironment(config=config, goal=(2, 2), start_states=STARTS.copy())
+        dataset = []
+        cur_state = env.reset()
+        for _ in range(TRAJECTORIES):
+            trajectory = []
+            for s in range(STEPS):
+                action = random.randint(0, 3)
+                next_state, reward, end = env.step(action)
+                act = ACTIONS[action]
+                trajectory.append((cur_state, np.array(act), next_state))
+                
+                cur_state = next_state
 
-    test_env1 = SimpleGridEnvironment(config=config1 , goal=(0, 0), start_states=STARTS.copy())
-    test_env2 = SimpleGridEnvironment(config=config2, goal=(2, 2), start_states=STARTS.copy())
-
-    prefix = [0, 1]
-    cur_state = test_env1.reset()
-    for _ in range(TRAJECTORIES):
-        trajectory = []
-        for s in range(STEPS):
-            action = random.randint(0, 3)
-            next_state, reward, end = test_env1.step(action)
-            act = ACTIONS[action]
-            trajectory.append((np.concatenate((prefix,cur_state)), \
-                np.array(act), np.concatenate((prefix, next_state))))
-            
-            cur_state = next_state
-
-        dataset1.append(trajectory)
-        cur_state = test_env1.reset()
-        
-    prefix = [1, 0]
-    cur_state = test_env2.reset()
-    for _ in range(TRAJECTORIES):
-        trajectory = []
-        for s in range(STEPS):
-            action = random.randint(0, 3)
-            next_state, reward, end = test_env2.step(action)
-            act = ACTIONS[action]
-            trajectory.append((np.concatenate((prefix, cur_state)), \
-                np.array(act), np.concatenate((prefix, next_state))))
-            
-            cur_state = next_state
-
-        dataset2.append(trajectory)
-        cur_state = test_env2.reset()
-        
-    return dataset1, dataset2
+            dataset.append(trajectory)
+            cur_state = env.reset()
+    
+        datasets.append(dataset)
+    return datasets
 
 
 def batch_data(dataset, batch_size):
