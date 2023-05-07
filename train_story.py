@@ -21,7 +21,7 @@ from models.learnable_story import LearnableStory
 
 device = torch.device("mps")
 # device = torch.device("cpu")
-HYPER_EPOCHS = 5
+HYPER_EPOCHS = 50
 BATCH_SIZE = 100
 WARMUP_EPISODES = 100
 LOAD_PATH = "../saved_models/may_5_run_1.state"
