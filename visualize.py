@@ -20,11 +20,11 @@ from models.learnable_story import LearnableStory
 # CONSTANTS
 ###################
 
-device = torch.device("mps")
+device = torch.device("cuda")
 # device = "cpu"
 BATCH_SIZE = 100
 SAMPLES = 1000
-MODEL_PATH = "../saved_models/may_5_run_1.state"
+MODEL_PATH = "../saved_models/may_8_run_1.state"
 
 #####################
 # Load Data and Model
@@ -103,10 +103,10 @@ x2 = e_embed[p1:p2, 0]
 x3 = e_embed[p2:p3, 0]
 x4 = e_embed[p3:, 0]
 
-y1 = e_embed[:p1, 0]
-y2 = e_embed[p1:p2, 0]
-y3 = e_embed[p2:p3, 0]
-y4 = e_embed[p3:, 0]
+y1 = e_embed[:p1, 1]
+y2 = e_embed[p1:p2, 1]
+y3 = e_embed[p2:p3, 1]
+y4 = e_embed[p3:, 1]
 
 
 plt.clf()
@@ -125,7 +125,7 @@ for x in _arr:
     c1 = (0.4, 0.2, 0.8, alpha)
     c2 = (0.8, 0.2, 0.3, alpha)
     c3 = (0.4, 0.8, 0.8, alpha)
-    c4 = (0.8, 0.2, 0.3, alpha)
+    c4 = (0.2, 0.8, 0.3, alpha)
     colors1.append(c1)
     colors2.append(c2)
     colors3.append(c3)
@@ -148,18 +148,17 @@ plt.scatter(x2[-1], y2[-1], color="black", s=55)
 plt.scatter(x3[-1], y3[-1], color="black", s=55)
 plt.scatter(x4[-1], y4[-1], color="black", s=55)
 plt.legend()
-plt.title("TSNE of latent converging over an episode")
-plt.savefig("episodic_tsne.png")
+plt.title("TSNE of latent converging over an episode - embedding method")
+plt.savefig("../plots/episodic_tsne.png")
 
 
-sys.exit(0)
+# sys.exit(0)
 ##################
 # TSNE Embeddings
 ##################
 
-h_concat = np.concatenate([higher1[-1], higher2[-1]], axis=0)
+h_concat = np.concatenate([higher1[-1], higher2[-1], higher3[-1], higher4[-1]], axis=0)
 print("######### EMBEDDINGS #########")
-# print(h_concat)
 print(h_concat.shape, type(h_concat))
 
 tsne_ = TSNE(n_components=2, init='pca', perplexity=20)
@@ -171,38 +170,60 @@ pca_embed = pca_.fit_transform(h_concat)
 
 # Plotting
 size = len(h_embed)
-print(size)
-x1 = h_embed[:int(size/2), 0]
-x2 = h_embed[int(size/2):, 0]
+p1 = int(size/4)
+p2 = 2 * int(size/4)
+p3 = 3 * int(size/4)
 
-y1 = h_embed[:int(size/2), 1]
-y2 = h_embed[int(size/2):, 1]
+
+print(size)
+x1 = h_embed[:p1, 0]
+x2 = h_embed[p1:p2, 0]
+x3 = h_embed[p2:p3, 0]
+x4 = h_embed[p3:, 0]
+
+y1 = h_embed[:p1, 1]
+y2 = h_embed[p1:p2, 1]
+y3 = h_embed[p2:p3, 1]
+y4 = h_embed[p3:, 1]
 
 plt.clf()
 plt.close()
 
 plt.scatter(x1, y1, label="Env 1")
 plt.scatter(x2, y2, label="Env 2")
+plt.scatter(x3, y3, label="Env 3")
+plt.scatter(x4, y4, label="Env 4")
 plt.legend()
-plt.title("TSNE of higher latents")
-plt.savefig("TSNE_latents.png")
+plt.title("TSNE of higher latents - embedding method")
+plt.savefig("../plots/TSNE_latents.png")
 
-
+# sys.exit(0)
 ##################
 # PCA Embeddings
 ##################
-x1 = pca_embed[:int(size/2), 0]
-x2 = pca_embed[int(size/2):, 0]
+size = len(pca_embed)
+p1 = int(size/4)
+p2 = 2 * int(size/4)
+p3 = 3 * int(size/4)
 
-y1 = pca_embed[:int(size/2), 1]
-y2 = pca_embed[int(size/2):, 1]
+x1 = pca_embed[:p1, 0]
+x2 = pca_embed[p1:p2, 0]
+x3 = pca_embed[p2:p3, 0]
+x4 = pca_embed[p3:, 0]
+
+y1 = pca_embed[:p1, 1]
+y2 = pca_embed[p1:p2, 1]
+y3 = pca_embed[p2:p3, 1]
+y4 = pca_embed[p3:, 1]
 
 plt.clf()
 plt.close()
 
 plt.scatter(x1, y1, label="Env 1")
 plt.scatter(x2, y2, label="Env 2")
+plt.scatter(x3, y3, label="Env 3")
+plt.scatter(x4, y4, label="Env 4")
 plt.legend()
-plt.title("PCA of higher latents")
-plt.savefig("PCA_latent.png")
+plt.title("PCA of higher latents - embedding method")
+plt.savefig("../plots/PCA_latent.png")
 sys.exit(0)

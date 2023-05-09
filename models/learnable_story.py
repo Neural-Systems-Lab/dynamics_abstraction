@@ -30,7 +30,7 @@ class LearnableStory(nn.Module):
         # Learning rates
         self.infer_lr = 0.1
         self.hyper_lr = 0.001
-        self.temporal_lr = 0.0005
+        self.temporal_lr = 0.001
         
         # Other vars
         self.infer_max_iter = 10
@@ -71,6 +71,7 @@ class LearnableStory(nn.Module):
             
             predicted_states = self.temporal(temporal_batch_input[t], weights)
             errors += self.batch_errors(temporal_batch_output[t], predicted_states)
+            # print(errors)
             
             if eval_mode:
                 print("saving higher states")
