@@ -21,11 +21,11 @@ from models.learnable_story import LearnableStory
 
 device = torch.device("cuda")
 # device = torch.device("cpu")
-HYPER_EPOCHS = 100
+HYPER_EPOCHS = 50
 BATCH_SIZE = 100
 WARMUP_EPISODES = 100
-LOAD_PATH = "../saved_models/may_8_run_1.state"
-SAVE_PATH = "../saved_models/may_8_run_1.state"
+LOAD_PATH = "../saved_models/may_8_run_2.state"
+SAVE_PATH = "../saved_models/may_8_run_2.state"
 #########################################
 # Training a Hypernet Modulated Network
 #########################################
@@ -83,48 +83,59 @@ for epochs in range(HYPER_EPOCHS):
         temporal_optim.zero_grad()
         
         l1 = model(x1[i], y1[i]) 
-    
-        l1.backward()
-        hyper_optim.step()
-        temporal_optim.step()
-
-        hyper_optim.zero_grad()
-        temporal_optim.zero_grad()
-        
         l2 = model(x2[i], y2[i])
- 
-        l2.backward()
-        hyper_optim.step()
-        temporal_optim.step()
-        
-        hyper_optim.zero_grad()
-        temporal_optim.zero_grad()
-        
         l3 = model(x3[i], y3[i])
- 
-        l3.backward()
-        hyper_optim.step()
-        temporal_optim.step()
-        
-        hyper_optim.zero_grad()
-        temporal_optim.zero_grad()
-        
         l4 = model(x4[i], y4[i])
- 
-        l4.backward()
+        
+        loss = l1+l2+l3+l4
+        loss.backward()
         hyper_optim.step()
         temporal_optim.step()
+        
+        print("i = ", i, "loss = ", loss.detach().cpu().numpy())
+        epoch_loss.append(loss.detach().cpu().numpy())
+        
+        # l1.backward()
+        # hyper_optim.step()
+        # temporal_optim.step()
+
+        # hyper_optim.zero_grad()
+        # temporal_optim.zero_grad()
+        
+        # l2 = model(x2[i], y2[i])
+ 
+        # l2.backward()
+        # hyper_optim.step()
+        # temporal_optim.step()
+        
+        # hyper_optim.zero_grad()
+        # temporal_optim.zero_grad()
+        
+        # l3 = model(x3[i], y3[i])
+ 
+        # l3.backward()
+        # hyper_optim.step()
+        # temporal_optim.step()
+        
+        # hyper_optim.zero_grad()
+        # temporal_optim.zero_grad()
+        
+        # l4 = model(x4[i], y4[i])
+ 
+        # l4.backward()
+        # hyper_optim.step()
+        # temporal_optim.step()
 
 
         
 
-        print("i = ", i, "loss1 = ", l1.detach().cpu().numpy())
-        print("i = ", i, "loss2 = ", l2.detach().cpu().numpy())
-        print("i = ", i, "loss2 = ", l3.detach().cpu().numpy())
-        print("i = ", i, "loss2 = ", l4.detach().cpu().numpy())
-        # print("Everything cool inside model train")
+        # print("i = ", i, "loss1 = ", l1.detach().cpu().numpy())
+        # print("i = ", i, "loss2 = ", l2.detach().cpu().numpy())
+        # print("i = ", i, "loss2 = ", l3.detach().cpu().numpy())
+        # print("i = ", i, "loss2 = ", l4.detach().cpu().numpy())
+        # # print("Everything cool inside model train")
         
-        epoch_loss.append((l1+l2+l3+l4).detach().cpu().numpy())
+        # epoch_loss.append((l1+l2+l3+l4).detach().cpu().numpy())
     
     print("Mean Loss : ", np.mean(epoch_loss))
     train_loss.append(np.mean(epoch_loss))

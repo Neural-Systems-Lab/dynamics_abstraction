@@ -24,7 +24,7 @@ Data is of the format : [(state, action, next_state), (state, action, next_state
 '''
 
 TRAJECTORIES = 1000
-STEPS = 25
+STEPS = 50
 
 configs = [c1, c2, c3, c4]
 datasets = []

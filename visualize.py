@@ -24,7 +24,7 @@ device = torch.device("cuda")
 # device = "cpu"
 BATCH_SIZE = 100
 SAMPLES = 1000
-MODEL_PATH = "../saved_models/may_8_run_1.state"
+MODEL_PATH = "../saved_models/may_8_run_2.state"
 
 #####################
 # Load Data and Model
@@ -112,7 +112,7 @@ y4 = e_embed[p3:, 1]
 plt.clf()
 plt.close()
 
-alpha0 = 0.04
+alpha0 = 0.02
 
 _arr = [x for x in range(len(x1))]
 colors1 = []

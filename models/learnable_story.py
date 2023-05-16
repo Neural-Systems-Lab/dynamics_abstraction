@@ -30,7 +30,7 @@ class LearnableStory(nn.Module):
         # Learning rates
         self.infer_lr = 0.1
         self.hyper_lr = 0.001
-        self.temporal_lr = 0.001
+        self.temporal_lr = 0.005
         
         # Other vars
         self.infer_max_iter = 10
