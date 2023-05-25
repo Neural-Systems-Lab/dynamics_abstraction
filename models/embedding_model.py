@@ -7,9 +7,9 @@ import sys
 # Network with learnable Stories
 ###########################################
 
-class LearnableStory(nn.Module):
+class LearnableEmbedding(nn.Module):
     def __init__(self, device, batch_size):
-        super(LearnableStory, self).__init__()
+        super(LearnableEmbedding, self).__init__()
         self.input_units = 4
         self.output_units = 32
         self.data_in_dims = 13
@@ -27,13 +27,13 @@ class LearnableStory(nn.Module):
             nn.ReLU(),
             nn.Linear(64, self.output_units)
         )
-        self.temporal = ModulatedMatrix(self.output_units, device, \
+        self.temporal = LowerRNN(self.output_units, device, \
                         batch_size, self.data_in_dims, self.data_out_dims)
         
         # Learning rates
         self.infer_lr = 0.1
         self.hyper_lr = 0.001
-        self.temporal_lr = 0.005
+        self.temporal_lr = 0.001
         
         # Other vars
         self.infer_max_iter = 10
@@ -68,21 +68,18 @@ class LearnableStory(nn.Module):
             if eval_mode:
                 higher_state_list.append(torch.squeeze(higher_state).detach().cpu().numpy())
         
+        # This is the final weights for this batch of samples
         weights = self.hypernet(higher_state)
-        
-        for t in range(len(temporal_batch_input)):
-            
-            predicted_states = self.temporal(temporal_batch_input[t], weights)
-            errors += self.batch_errors(temporal_batch_output[t], predicted_states)
-            # print(errors)
-            
-            if eval_mode:
-                print("saving higher states")
-                predicted_states_list.append(predicted_states.detach().cpu().numpy())
-                # higher_state_list.append(torch.squeeze(higher_state).detach().cpu().numpy())
-                # weights_list.append(weights.detach().cpu().numpy())
-        
-        errors = errors/len(temporal_batch_input)
+        print(higher_state[0])
+        temporal_batched_weights = weights.repeat(25, 1, 1)
+        # print("shapes : ", temporal_batch_input.shape, temporal_batch_output.shape, weights.shape)
+
+        predicted_states = self.temporal(temporal_batch_input, temporal_batched_weights)
+        errors = torch.pow(predicted_states-temporal_batch_output, 2)
+        # print(errors.shape)
+        errors = torch.sum(torch.sum(errors, axis=-1), axis=0)
+        # print(errors.shape)
+        errors = torch.mean(errors)
         
         if eval_mode:
             return errors.detach().cpu().numpy(), \
@@ -101,29 +98,32 @@ class LearnableStory(nn.Module):
         
         # Is this optimizer definition correct for batched story?
         infer_optimizer = torch.optim.SGD([story], self.infer_lr)
-        # print(story, infer_optimizer)
+        
+        hidden = torch.zeros((self.temporal.num_layers, self.batch_size, \
+                self.temporal.hidden_size), device=self.device)
         
         for i in range(self.infer_max_iter):
             weights = self.hypernet(story)
             # print("Weights : ", weights.shape)
-            
-            predicted_states = self.temporal(batch_input, weights)
+            hidden = hidden.detach()
+            predicted_states, hidden = self.temporal.forward_inference(batch_input, weights, hidden)
             # print("Temporal next states : ", predicted_states.shape)
             
             loss = self.batch_errors(batch_output, predicted_states)+\
                 self.l2_lambda * torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)
                 # self.l1_lambda * torch.mean(torch.sum(torch.abs(story), axis=-1), axis=0)
 
-            if self.eval_mode:
-                print("L2 val : ", torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)\
-                    .detach().cpu().numpy(), "\t Loss : ", loss.detach().cpu().numpy())
+            # if self.eval_mode:
+            #     print("L2 val : ", torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)\
+            #         .detach().cpu().numpy(), "\t Loss : ", loss.detach().cpu().numpy())
             
+            # print("loss : ", loss)
             # Backward - but only update story
             loss.backward()
             infer_optimizer.step()
             infer_optimizer.zero_grad()
             self.zero_grad()
-            # print("backward pass")
+            # print("backward pass done for step : ", i)
             
         return story.clone().detach()
 
@@ -142,10 +142,10 @@ class LearnableStory(nn.Module):
 # Lower Level Transition Model 
 ##################################
 
-class ModulatedMatrix(nn.Module):
+class LowerRNN(nn.Module):
     
     def __init__(self, k, device, batch_size, inp, out):
-        super(ModulatedMatrix, self).__init__()
+        super(LowerRNN, self).__init__()
     
         self.top_down_weights = k
         self.device = device
@@ -153,23 +153,27 @@ class ModulatedMatrix(nn.Module):
         self.input_shape = inp
         self.output_shape = out
         self.hidden_size = 32
-        self.temporal_ = nn.RNN(input_size=self.top_down_weights+self.input_shape,\
-                        hidden_size=self.hidden_size, num_layers=2)
+        self.num_layers = 1
+        self.rnn = nn.RNN(input_size=self.top_down_weights+self.input_shape,\
+                        hidden_size=self.hidden_size, num_layers=self.num_layers)
+        self.decoder = nn.Linear(self.hidden_size, self.output_shape)
 
     # Batch forward
     def forward(self, inputs, weights):
+        # print("in forward : ", inputs.shape, weights.shape)
+        inp = torch.cat((inputs, weights), dim=2)
+        # print(inp.shape)
+        out, _ = self.rnn(inp)
+        output = self.decoder(out)
+        # print("final output : ", output.shape)    
+        return output    
+
+    def forward_inference(self, batch_input, weights, hidden):
+        inp = torch.unsqueeze(torch.cat([batch_input, weights], dim=1), dim=0)
+        # print(inp.shape, hidden.shape)
         
-        inp = torch.cat((inputs, weights), dims=2)
-        out, _ = self.temporal_
-        
-        
-        # # print(self.temporal_)
-        # # sys.exit(0)
-        # v_matrix = torch.matmul(weights, self.temporal_.reshape(self.k, -1))
-        # # print("lower transition : ", v_matrix.shape)
-        # v_matrix = v_matrix.reshape(self.batch_size, self.input_shape, self.output_shape)
-        # inputs = torch.unsqueeze(inputs, 1)
-        # # print("Shapes : ", v_matrix.shape, inputs.shape)
-        # next_states = F.relu(torch.bmm(inputs, v_matrix))
-        
-        # return torch.squeeze(next_states)
+        out, h = self.rnn(inp, hidden)
+        # print("post rnn : ", out.shape, h.shape)
+        output = torch.squeeze(self.decoder(out))
+        # print("final : ", output.shape)
+        return output, h

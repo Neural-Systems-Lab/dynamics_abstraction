@@ -31,7 +31,7 @@ datasets = []
 def get_transitions():
 
     for config in configs:
-        env = SimpleGridEnvironment(config=config, goal=(2, 2), start_states=STARTS.copy())
+        env = SimpleGridEnvironment(config=config, goal=(2, 0), start_states=STARTS.copy())
         dataset = []
         cur_state = env.reset()
         for _ in range(TRAJECTORIES):

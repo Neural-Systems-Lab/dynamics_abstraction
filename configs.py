@@ -90,7 +90,7 @@ c2 = {
     "name": "3 * 3 Grid, Config 2",
     "rows": 3,
     "cols": 3,
-    "walls": [(1, 1), (2, 1)],
+    "walls": [(1, 1), (2, 1), (2, 2)],
 }
 
 c3 = {
@@ -106,11 +106,11 @@ c4 = {
     "name": "3 * 3 Grid, Config 4",
     "rows": 3,
     "cols": 3,
-    "walls": [(1, 2), (1, 1)],
+    "walls": [(1, 2), (1, 1), (0, 0)],
 }
 
 
-
+composition = [1, 2]
 # Network configurations
 
 lower_level_config = {
