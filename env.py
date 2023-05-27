@@ -24,12 +24,14 @@ class SimpleGridEnvironment:
         self.actions = {0:"Right", 1:"Left", 2:"Down", 3:"Up"}
         self.goal = goal
         
+        x, y = goal
+        self.board[x, y] = GOAL_PIXEL
         
         self.valid_start_positions = []
         for i in range(self.rows):
             for j in range(self.cols):
-                if (i, j) not in self.walls and \
-                    (i, j) != self.goal:
+                if (i, j) not in self.walls:
+                    # (i, j) != self.goal:
                     self.valid_start_positions.append((i, j))
         
         # print("##### START STATESSS #####")
@@ -54,8 +56,7 @@ class SimpleGridEnvironment:
         for x ,y in self.walls:
             self.board[x, y] = WALL_PIXEL
         
-        x, y = goal
-        self.board[x, y] = GOAL_PIXEL
+
         
         # Will contain agent position for each step of each episode
         # Each step is (s, a, s', r)
@@ -185,13 +186,22 @@ class SimpleGridEnvironment:
             
         
     def plot_board(self):
+        plt.clf()
+        plt.close()
         _board = self.board.copy()
-        _board[self.state] = POS_PIXEL
+        # _board[self.state] = POS_PIXEL
+        cmap = colors.ListedColormap(['black', 'gray', 'green'])
+        bounds=[0,1,3,4]
+        norm = colors.BoundaryNorm(bounds, cmap.N)
         ax = plt.figure(figsize=(6, 6))
-        plt.title("Environment 3 x 5 - 1")
-        plt.imshow(_board, cmap='viridis')
+        # ax.xaxis.set_ticklabels([])
+        # ax.yaxis.set_ticklabels([])
+        plt.title("Environment - "+str(self.config["id"]))
+        plt.imshow(_board, cmap=cmap, norm=norm)
         # plt.show()
-        plt.savefig("./figs/board.png")
+        plt.savefig("../plots/envs/board_"+self.config["name"]+".png")
+        plt.clf()
+        plt.close()
     
     
     def plot_transition(self, cur_state, action, next_state, path, name):

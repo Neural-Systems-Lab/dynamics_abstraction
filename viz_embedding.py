@@ -12,6 +12,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
+import matplotlib.lines as mlines
 
 from dataloader import *
 from models.embedding_model import LearnableEmbedding
@@ -24,7 +25,7 @@ device = torch.device("cuda")
 # device = "cpu"
 BATCH_SIZE = 100
 SAMPLES = 1000
-MODEL_PATH = "../saved_models/embedding/may_18_run_4.state"
+MODEL_PATH = "../saved_models/embedding/may_25_run_1.state"
 
 #####################
 # Load Data and Model
@@ -114,11 +115,11 @@ plt.close()
 
 alpha0 = 0.02
 
-_arr = [x for x in range(len(x1))]
 colors1 = []
 colors2 = []
 colors3 = []
 colors4 = []
+_arr = [x for x in range(len(x1))]
 
 for x in _arr:
     alpha = alpha0 * (x+1)
@@ -133,21 +134,28 @@ for x in _arr:
 
 
 
-plt.scatter(x1, y1, color=colors1, label="Env 1")
-plt.scatter(x2, y2, color=colors2, label="Env 2")
-plt.scatter(x3, y3, color=colors3, label="Env 3")
-plt.scatter(x4, y4, color=colors4, label="Env 4")
+plt.scatter(x1, y1, color=colors1)
+plt.scatter(x2, y2, color=colors2)
+plt.scatter(x3, y3, color=colors3)
+plt.scatter(x4, y4, color=colors4)
 
-plt.plot(x1, y1, linewidth=0.2)
-plt.plot(x2, y2, linewidth=0.2)
-plt.plot(x3, y3, linewidth=0.2)
-plt.plot(x4, y4, linewidth=0.2)
+plt.plot(x1, y1, color=c1, linewidth=0.2)
+plt.plot(x2, y2, color=c2, linewidth=0.2)
+plt.plot(x3, y3, color=c3, linewidth=0.2)
+plt.plot(x4, y4, color=c4, linewidth=0.2)
 
 plt.scatter(x1[-1], y1[-1], color="black", s=55)
 plt.scatter(x2[-1], y2[-1], color="black", s=55)
 plt.scatter(x3[-1], y3[-1], color="black", s=55)
 plt.scatter(x4[-1], y4[-1], color="black", s=55)
-plt.legend()
+
+one = mlines.Line2D([], [], color=c1, marker='o', ls='', label='Env 1')
+two = mlines.Line2D([], [], color=c2, marker='o', ls='', label='Env 2')
+three = mlines.Line2D([], [], color=c3, marker='o', ls='', label='Env 3')
+four = mlines.Line2D([], [], color=c4, marker='o', ls='', label='Env 4')
+# etc etc
+plt.legend(handles=[one, two, three, four])
+
 plt.title("TSNE of latent converging over an episode - embedding method")
 plt.savefig("../plots/episodic_tsne.png")
 

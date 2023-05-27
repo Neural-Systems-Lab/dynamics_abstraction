@@ -24,7 +24,7 @@ Data is of the format : [(state, action, next_state), (state, action, next_state
 '''
 
 TRAJECTORIES = 1000
-STEPS = 50
+STEPS = 25
 
 configs = [c1, c2, c3, c4]
 datasets = []
@@ -32,6 +32,7 @@ def get_transitions():
 
     for config in configs:
         env = SimpleGridEnvironment(config=config, goal=(2, 0), start_states=STARTS.copy())
+        env.plot_board()
         dataset = []
         cur_state = env.reset()
         for _ in range(TRAJECTORIES):

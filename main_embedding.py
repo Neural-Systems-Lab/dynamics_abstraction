@@ -21,11 +21,11 @@ from models.embedding_model import LearnableEmbedding
 
 device = torch.device("cuda")
 # device = torch.device("cpu")
-HYPER_EPOCHS = 100
+HYPER_EPOCHS = 50
 BATCH_SIZE = 100
 WARMUP_EPISODES = 100
-LOAD_PATH = "../saved_models/embedding/may_18_run_4.state"
-SAVE_PATH = "../saved_models/embedding/may_18_run_4.state"
+LOAD_PATH = "../saved_models/embedding/may_25_run_1.state"
+SAVE_PATH = "../saved_models/embedding/may_25_run_1.state"
 #########################################
 # Training a Hypernet Modulated Network
 #########################################

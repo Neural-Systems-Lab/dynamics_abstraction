@@ -6,7 +6,7 @@ import numpy as np
 # global variables
 
 # Pixel inputs to the model
-GOAL_PIXEL = 4
+GOAL_PIXEL = 0
 POS_PIXEL = 1
 WALL_PIXEL = 2
 EMPTY_PIXEL = 0
@@ -45,7 +45,7 @@ SAVE_DIR = "/home/vsathish/core_projects/aistats/"
 config1 = {
     "id":1,
     "one_hot":[0, 1],
-    "name": "3 * 3 Grid, Config 1",
+    "name": "Config 1",
     "rows": 3,
     "cols": 3,
     "goal_states": {(0, 0): [0, 0, 0, 0, 0, 0, 0, 1],   # A4
@@ -60,7 +60,7 @@ config1 = {
 config2 = {
     "id":2,
     "one_hot":[1, 0],
-    "name": "3 * 3 Grid, Config 2",
+    "name": "Config 2",
     "rows": 3,
     "cols": 3,
     "goal_states": {(0, 0): [0, 0, 0, 1, 0, 0, 0, 0], 
@@ -79,34 +79,34 @@ config2 = {
 
 c1 = {
     "id":1,
-    "name": "3 * 3 Grid, Config 1",
+    "name": "Base Config 1",
     "rows": 3,
     "cols": 3,
-    "walls": [(0, 1), (1, 1)],
+    "walls": [(0, 1), (0, 2), (1, 1), (1, 2)],
 }
 
 c2 = {
     "id":2,
-    "name": "3 * 3 Grid, Config 2",
+    "name": "Base Config 2",
     "rows": 3,
     "cols": 3,
-    "walls": [(1, 1), (2, 1), (2, 2)],
+    "walls": [(1, 0), (2, 0), (2, 1)],
 }
 
 c3 = {
     "id":3,
-    "name": "3 * 3 Grid, Config 3",
+    "name": "Base Config 3",
     "rows": 3,
     "cols": 3,
-    "walls": [(1, 0), (1, 1)],
+    "walls": [(0, 0), (1, 0), (2, 0), (0, 2), (1, 2), (2, 2)],
 }
 
 c4 = {
     "id":4,
-    "name": "3 * 3 Grid, Config 4",
+    "name": "Base Config 4",
     "rows": 3,
     "cols": 3,
-    "walls": [(1, 2), (1, 1), (0, 0)],
+    "walls": [(2, 0), (2, 1), (2, 2), (1, 2), (0, 2)],
 }
 
 
