@@ -17,9 +17,9 @@ import matplotlib.lines as mlines
 from dataloader import *
 from models.embedding_model import LearnableEmbedding
 
-###################
+##############
 # CONSTANTS
-###################
+##############
 
 device = torch.device("cuda")
 # device = "cpu"
@@ -175,6 +175,10 @@ print(h_embed.shape)
 
 pca_ = PCA(n_components=2)
 pca_embed = pca_.fit_transform(h_concat)
+print("### VARIANCE EXPLAINED ###")
+print(pca_.explained_variance_)
+print(pca_.explained_variance_ratio_)
+
 
 # Plotting
 size = len(h_embed)

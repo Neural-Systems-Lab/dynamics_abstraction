@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 # import cv2
 
-from configs import *
+from .configs import *
 
 
 class SimpleGridEnvironment:

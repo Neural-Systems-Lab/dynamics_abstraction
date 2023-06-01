@@ -1,8 +1,8 @@
 import numpy as np
 import random
 
-from env import SimpleGridEnvironment
-from configs import *
+from environments.env import SimpleGridEnvironment
+from environments.configs import *
 # from state_model_hypernet import MatrixModule
 
 

@@ -12,7 +12,7 @@ import torch.nn.functional as F
 # from sklearn.manifold import TSNE
 # from sklearn.decomposition import PCA
 
-from dataloader import *
+from dataloaders.dataloader import *
 from models.embedding_model import LearnableEmbedding
 
 ###################
