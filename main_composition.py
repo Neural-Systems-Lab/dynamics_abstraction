@@ -9,8 +9,10 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 
-from dataloaders.compositional_dataloader import *
+from environments.composition import CompositionGrid
+from dataloaders.dataloader_compositional import *
 from models.embedding_model import LearnableEmbedding
+
 
 ###################
 # CONSTANTS
@@ -24,7 +26,12 @@ WARMUP_EPISODES = 100
 LOAD_PATH = "../saved_models/may_8_run_2.state"
 SAVE_PATH = "../saved_models/may_8_run_2.state"
 
-dataset = get_transitions()
+# Define env
+env = CompositionGrid()
+env.plot_board()
 
-print(len(dataset))
-# print(dataset[0])
+# Get dataset
+dataset = get_transitions(env)
+x, y = batch_data(dataset, BATCH_SIZE)
+print(x.shape, y.shape)
+

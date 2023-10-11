@@ -8,12 +8,13 @@ import sys
 ###########################################
 
 class LearnableEmbedding(nn.Module):
-    def __init__(self, device, batch_size):
+    def __init__(self, device, batch_size, timesteps=25):
         super(LearnableEmbedding, self).__init__()
         self.input_units = 4
         self.output_units = 32
         self.data_in_dims = 13
         self.data_out_dims = 9
+        self.input_timesteps = timesteps
         self.device = device
         self.batch_size = batch_size
         
@@ -71,7 +72,7 @@ class LearnableEmbedding(nn.Module):
         # This is the final weights for this batch of samples
         weights = self.hypernet(higher_state)
         print(higher_state[0])
-        temporal_batched_weights = weights.repeat(25, 1, 1)
+        temporal_batched_weights = weights.repeat(self.input_timesteps, 1, 1)
         # print("shapes : ", temporal_batch_input.shape, temporal_batch_output.shape, weights.shape)
 
         predicted_states = self.temporal(temporal_batch_input, temporal_batched_weights)
@@ -160,7 +161,7 @@ class LowerRNN(nn.Module):
 
     # Batch forward
     def forward(self, inputs, weights):
-        # print("in forward : ", inputs.shape, weights.shape)
+        print("in forward : ", inputs.shape, weights.shape)
         inp = torch.cat((inputs, weights), dim=2)
         # print(inp.shape)
         out, _ = self.rnn(inp)

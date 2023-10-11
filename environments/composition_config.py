@@ -8,7 +8,8 @@ Environment configurations
 '''
 
 # Pixel values
-GOAL_PIXEL = 0
+GOAL_PIXEL = 5
+POS_PIXEL = 3
 WALL_PIXEL = 0
 EMPTY_PIXEL = 1
 
@@ -26,4 +27,16 @@ composite_config1 = {
     [0, 1, 1, 1, 0, 0],
     [0, 0, 1, 1, 1, 1]])
 
+}
+
+composite_config2 = {
+    "id":1,
+    "name":"composition2",
+    "board":np.array([
+    [1, 1, 1, 1, 0, 0],
+    [0, 1, 1, 1, 0, 0],
+    [0, 0, 1, 1, 1, 1],
+    [0, 0, 0, 1, 1, 0],
+    [0, 0, 0, 1, 1, 0],
+    [0, 0, 0, 0, 0, 0]])
 }

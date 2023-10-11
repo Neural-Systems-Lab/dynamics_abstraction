@@ -12,7 +12,7 @@ import torch.nn.functional as F
 # from sklearn.manifold import TSNE
 # from sklearn.decomposition import PCA
 
-from dataloader import *
+from dataloaders.dataloader import *
 from models.learnable_story import LearnableStory
 
 ###################
@@ -24,8 +24,8 @@ device = torch.device("cuda")
 HYPER_EPOCHS = 50
 BATCH_SIZE = 100
 WARMUP_EPISODES = 100
-LOAD_PATH = "../saved_models/may_8_run_2.state"
-SAVE_PATH = "../saved_models/may_8_run_2.state"
+LOAD_PATH = "../saved_models/oct_4_run_1.state"
+SAVE_PATH = "../saved_models/oct_4_run_1.state"
 #########################################
 # Training a Hypernet Modulated Network
 #########################################

@@ -127,3 +127,5 @@ lower_level_config = {
     "steps_threshold": 5, # Skip training if num_steps < threshold
     "action_mapping":{0:"up", 1:"down", 2:"left", 3:"right"}
 }
+
+

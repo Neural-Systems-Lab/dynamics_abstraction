@@ -1,7 +1,6 @@
 import numpy as np
 import random
 
-from environments.composition2 import CompositionGrid
 from environments.composition_config import *
 
 ##########################
@@ -19,12 +18,10 @@ ACTIONS = {0:[0, 0, 0, 1],
            }
 
 TRAJECTORIES = 1000
-STEPS = 25
+STEPS = 1000
 
-def get_transitions():
-
-    env = CompositionGrid()
-    env.plot_board()
+def get_transitions(env):
+    
     dataset = []
     cur_state = env.reset()
     for _ in range(TRAJECTORIES):
