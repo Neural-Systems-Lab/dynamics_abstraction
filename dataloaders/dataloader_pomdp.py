@@ -1,19 +1,8 @@
 import numpy as np
 import random
 
+from environments.pomdp_config import *
 from environments.env import SimpleGridEnvironment
-from environments.configs import *
-# from state_model_hypernet import MatrixModule
-
-
-
-GOALS = [(0, 0), (2, 2), (0, 2), (2, 0)]
-STARTS = [(0, 2), (2, 2), (2, 0), (0, 0)]
-ACTIONS = {0:[0, 0, 0, 1],
-           1:[0, 0, 1, 0],
-           2:[0, 1, 0, 0],
-           3:[1, 0, 0, 0]
-           }
 
 ##########################
 # Gather Data to train
@@ -23,11 +12,18 @@ ACTIONS = {0:[0, 0, 0, 1],
 Data is of the format : [(state, action, next_state), (state, action, next_state), ...]
 '''
 
+ACTIONS = {0:[0, 0, 0, 1],
+           1:[0, 0, 1, 0],
+           2:[0, 1, 0, 0],
+           3:[1, 0, 0, 0]
+           }
+
 TRAJECTORIES = 1000
 STEPS = 25
 
-configs = [c1, c2, c3, c4]
+configs = [c1, c2]
 datasets = []
+
 def get_transitions():
 
     for config in configs:
@@ -93,5 +89,3 @@ def batch_data(dataset, batch_size):
     batch_output = np.array(batch_output)
     
     return batch_input, batch_output
-    
-    

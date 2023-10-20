@@ -7,12 +7,12 @@ from matplotlib import colors
 import matplotlib.patches as patches
 from matplotlib.colors import ListedColormap
 
-from environments.composition_config import *
+from environments.pomdp_config import *
 
 
 class CompositionGrid():
     def __init__(self, config=composite_config2, \
-                rows=6, columns=6, block_size=(3, 3), goal=None):
+                rows=5, columns=10, block_size=(5, 5), goal=None):
         
         # Define global constants
         self.config = config

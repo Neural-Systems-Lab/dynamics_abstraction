@@ -13,7 +13,7 @@ from .configs import *
 
 
 class SimpleGridEnvironment:
-    def __init__(self, config, goal, start_states):
+    def __init__(self, config, goal):
         
         # Create the canvas with walls and a single goal state
         self.rows, self.cols, self.walls, self.env_name = \
@@ -91,6 +91,7 @@ class SimpleGridEnvironment:
         # print(self.one_hot_mapping, self.state)
         # print(self.one_hot_mapping[self.state])
         return self.one_hot_mapping[self.state].flatten()
+    
     
     def step(self, action):
         
