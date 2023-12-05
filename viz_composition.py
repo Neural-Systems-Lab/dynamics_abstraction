@@ -20,22 +20,23 @@ from dataloaders.dataloader import batch_data as bd
 from dataloaders.dataloader_compositional import get_transitions, batch_data
 
 from models.embedding_model import LearnableEmbedding
-
+from environments.pomdp_config import *
+# from models.learnable_story import LearnableStory
 ##############
 # CONSTANTS
 ##############
 
-device = torch.device("cuda")
+device = torch.device("mps")
 # device = "cpu"
 BATCH_SIZE = 100
 TIMESTEPS = 25
-MODEL_PATH = "/gscratch/rao/vsathish/quals/saved_models/embedding/may_25_run_1.state"
+MODEL_PATH = "/Users/vsathish/Documents/Quals/saved_models/pomdp/oct_25_run_1_embedding.state"
 
 ###################################
 # Load Compositional Data and Model
 ###################################
 
-env = CompositionGrid()
+env = CompositionGrid(composite_config3)
 # env.plot_board()
 dataset = get_transitions(env)
 x1, y1 = batch_data(dataset, BATCH_SIZE)
@@ -49,7 +50,8 @@ y1 = torch.from_numpy(y1).to(device, dtype=torch.float32)
 # Model
 ####################
 timesteps = 1000
-model = LearnableEmbedding(device, BATCH_SIZE, timesteps).to(device)
+# model = LearnableEmbedding(device, BATCH_SIZE, timesteps).to(device)
+model = LearnableEmbedding(device, BATCH_SIZE).to(device)
 
 try:
     model.load_state_dict(torch.load(MODEL_PATH))
@@ -58,9 +60,9 @@ try:
 except:
     print("################## NOPE #######################")
 
-
+# sys.exit(0)
 l1, _, higher1 = model(x1[0], y1[0], eval_mode=True) 
-
+# sys.exit(0)
 print(l1)
 
 higher1 = np.array(higher1)
@@ -104,10 +106,10 @@ plt.plot(x1, y1, linewidth=0.2)
 plt.scatter(x1[-1], y1[-1], color="black", s=55)
 
 plt.title("TSNE of latent converging over an episode - embedding method")
-plt.savefig("../plots/composition/episodic_tsne.png")
+plt.savefig("../plots/compositional/episodic_tsne.png")
 
 
-# sys.exit(0)
+sys.exit(0)
 ##################
 # TSNE Embeddings
 ##################

@@ -7,9 +7,9 @@ import sys
 # Network with learnable Stories
 ###########################################
 
-class LearnableEmbedding(nn.Module):
+class ActionEmbedding(nn.Module):
     def __init__(self, device, batch_size, timesteps=25):
-        super(LearnableEmbedding, self).__init__()
+        super(ActionEmbedding, self).__init__()
         self.input_units = 4
         self.output_units = 32
         self.data_in_dims = 13

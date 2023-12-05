@@ -11,9 +11,10 @@ from environments.pomdp_config import *
 
 
 class CompositionGrid():
-    def __init__(self, config=composite_config2, \
+    def __init__(self, config, \
                 rows=5, columns=10, block_size=(5, 5), goal=None):
         
+        print(config)
         # Define global constants
         self.config = config
         self.walls = []
@@ -39,8 +40,8 @@ class CompositionGrid():
         # Later we will map to an image instead
         self.one_hots = self.map_pos_to_one_hot()
         
-        print(self.one_hots)
-        print(self.higher_states)
+        # print(self.one_hots)
+        # print(self.higher_states)
 
         if goal == None:
             self.goal = random.choice(self.valid_pos)
@@ -48,6 +49,7 @@ class CompositionGrid():
             self.goal = goal
 
     def wall_finder(self):
+
         for i in range(self.rows):
             for j in range(self.columns):
                 if self.board[i][j] != 0:
@@ -75,6 +77,19 @@ class CompositionGrid():
         
         return self.one_hots
 
+    def get_pomdp_state(self):
+        # Extract a 3 x 3 patch around the current state
+        # Return a flattened version of the patch
+        # print(self.state)
+        patch = np.zeros((3, 3))
+        for i in range(0, 3):
+            for j in range(0, 3):
+                r, c = self.state[0]-1+i, self.state[1]-1+j
+                if r < 0 or r >= self.rows or c < 0 or c >= self.columns:
+                    patch[i][j] = np.random.choice((WALL_PIXEL, EMPTY_PIXEL))
+                else:
+                    patch[i][j] = self.board[(r, c)]
+        return patch.flatten()
 
     def reset(self, start=None, goal=None):
         if len(self.episode_data) > 0:
@@ -88,7 +103,8 @@ class CompositionGrid():
             self.goal = goal
 
         self.state = start
-        return self.one_hots[self.state]
+        # return self.one_hots[self.state]
+        return self.get_pomdp_state()
 
     def step(self, action):
         
@@ -98,7 +114,8 @@ class CompositionGrid():
         self.episode_data.append((self.state, action, next_state, reward))
         self.state = next_state
         
-        return self.one_hots[self.state].flatten(), reward, end
+        # return self.one_hots[self.state].flatten(), reward, end
+        return self.get_pomdp_state(), reward, end
         
     def next_position(self, action):
         # print(action)

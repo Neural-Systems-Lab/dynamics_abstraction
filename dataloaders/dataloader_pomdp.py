@@ -1,6 +1,6 @@
 import numpy as np
 import random
-
+import sys
 from environments.pomdp_config import *
 from environments.env import SimpleGridEnvironment
 
@@ -22,10 +22,10 @@ TRAJECTORIES = 1000
 STEPS = 25
 
 configs = [c1, c2]
-datasets = []
 
+print(configs)
 def get_transitions():
-
+    datasets = []
     for config in configs:
         env = SimpleGridEnvironment(config=config, goal=(2, 0))
         env.plot_board()
@@ -36,11 +36,12 @@ def get_transitions():
             for s in range(STEPS):
                 action = random.randint(0, 3)
                 next_state, reward, end = env.step(action)
+                # pomdp_state = env.get_pomdp_state()
                 act = ACTIONS[action]
                 trajectory.append((cur_state, np.array(act), next_state))
                 
                 cur_state = next_state
-
+            # sys.exit(0)
             dataset.append(trajectory)
             cur_state = env.reset()
     

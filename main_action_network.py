@@ -1,3 +1,11 @@
+'''
+The action network is to learn policies for subgoals: 
+    Theta_T = Hypernet(A_T)
+    a_{T,t+1} = PI(s_{T,t}, a_{T,t} | Theta_T)
+
+'''
+
+
 import os
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "2"
@@ -11,31 +19,52 @@ import torch.nn.functional as F
 # from sklearn.manifold import TSNE
 # from sklearn.decomposition import PCA
 
-# from environments.env import SimpleGridEnvironment
-# from environments.pomdp_config import *
-from dataloaders.dataloader_pomdp import *
+from dataloaders.dataloader import *
 from models.learnable_story import LearnableStory
-from models.embedding_model import LearnableEmbedding
-device = torch.device("mps")
 
+###################
+# CONSTANTS
+###################
+
+device = torch.device("cuda")
+# device = torch.device("cpu")
 HYPER_EPOCHS = 50
 BATCH_SIZE = 100
 WARMUP_EPISODES = 100
-LOAD_PATH = "../saved_models/pomdp/oct_25_run_1_embedding.state"
-SAVE_PATH = "../saved_models/pomdp/oct_25_run_1_embedding.state"
+LOAD_PATH = "../saved_models/oct_4_run_1.state"
+SAVE_PATH = "../saved_models/oct_4_run_1.state"
+#########################################
+# Training a Hypernet Modulated Network
+#########################################
 
-data1, data2 = get_transitions()
+# Transforming data
+
+data1, data2, data3, data4 = get_transitions()
+
 x1, y1 = batch_data(data1, BATCH_SIZE)
 x2, y2 = batch_data(data2, BATCH_SIZE)
+x3, y3 = batch_data(data3, BATCH_SIZE)
+x4, y4 = batch_data(data4, BATCH_SIZE)
 
-print(x1.shape, y2.shape)
+print(x2.shape, y3.shape)
 
 x1 = torch.from_numpy(x1).to(device, dtype=torch.float32)
 x2 = torch.from_numpy(x2).to(device, dtype=torch.float32)
+x3 = torch.from_numpy(x3).to(device, dtype=torch.float32)
+x4 = torch.from_numpy(x4).to(device, dtype=torch.float32)
+
+
 y1 = torch.from_numpy(y1).to(device, dtype=torch.float32)
 y2 = torch.from_numpy(y2).to(device, dtype=torch.float32)
-# model = LearnableStory(device, BATCH_SIZE).to(device)
-model = LearnableEmbedding(device, BATCH_SIZE).to(device)
+y3 = torch.from_numpy(y3).to(device, dtype=torch.float32)
+y4 = torch.from_numpy(y4).to(device, dtype=torch.float32)
+
+
+#######################
+# MODEL LOAD and TRAIN
+#######################
+
+model = LearnableStory(device, BATCH_SIZE).to(device)
 
 try:
     model.load_state_dict(torch.load(LOAD_PATH))
@@ -43,7 +72,6 @@ try:
 
 except:
     print("################## NOPE #######################")
-
 
 hyper_optim = torch.optim.Adam(model.hypernet.parameters(), model.hyper_lr)
 temporal_optim = torch.optim.SGD(model.temporal.parameters(), model.temporal_lr)
@@ -63,16 +91,17 @@ for epochs in range(HYPER_EPOCHS):
         
         l1 = model(x1[i], y1[i]) 
         l2 = model(x2[i], y2[i])
-
+        l3 = model(x3[i], y3[i])
+        l4 = model(x4[i], y4[i])
         
-        loss = l1+l2
+        loss = l1+l2+l3+l4
         loss.backward()
         hyper_optim.step()
         temporal_optim.step()
         
         print("i = ", i, "loss = ", loss.detach().cpu().numpy())
         epoch_loss.append(loss.detach().cpu().numpy())
-
+        
     
     print("Mean Loss : ", np.mean(epoch_loss))
     train_loss.append(np.mean(epoch_loss))

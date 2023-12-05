@@ -1,8 +1,8 @@
 import numpy as np
 import random
 
-from environments.composition_config import *
-
+# from environments.composition_config import *
+from environments.pomdp_config import *
 ##########################
 # Gather Data to train
 ##########################
@@ -62,7 +62,7 @@ def batch_data(dataset, batch_size):
             output_t = []
             
             for i in range(start, start+batch_size):
-
+                # print(dataset[i][time])
                 ip = np.concatenate((dataset[i][time][0], dataset[i][time][1]))
                 op = dataset[i][time][2]
                 

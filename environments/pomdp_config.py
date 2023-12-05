@@ -6,7 +6,7 @@ import numpy as np
 # global variables
 
 # Pixel inputs to the model
-GOAL_PIXEL = 0
+GOAL_PIXEL = 6
 POS_PIXEL = 1
 WALL_PIXEL = 2
 EMPTY_PIXEL = 0
@@ -15,6 +15,7 @@ GOAL_REWARD = 10
 STEP_REWARD = -0.1
 OPTION_STEP_REWARD = -0.5
 
+ENV_SAVE_PATH = "/Users/vsathish/Documents/Quals/plots/envs/"
 
 c1 = {
     "id":1,
@@ -27,8 +28,22 @@ c1 = {
                 (3, 0), (3, 1), (3, 2), (3, 3), (3, 4),
                 (4, 0), (4, 1), (4, 2), (4, 3), (4, 4)
             ],
+    "subgoals":[(2, 0), (2, 4)],
+    "abs_actions":[
+        [
+            [0, 0, 0, 1],
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 0, 1]
+        ],
+        [
+            [1, 0, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0]
+        ]
+    ]
 }
-
 
 
 c2 = {
@@ -42,12 +57,27 @@ c2 = {
                 (3, 0),                 (3, 3), (3, 4),
                 (4, 0),                 (4, 3), (4, 4)
     ],
+    "subgoals":[(2, 0), (4, 2), (0, 2)],
+    "abs_actions":[
+        [
+            [0, 0, 0, 1],
+            [0, 0, 0, 1],
+            [0, 0, 1, 0],
+            [1, 0, 0, 0]
+        ],
+        [
+            [0, 0, 0, 1],
+            [0, 0, 1, 0],
+            [0, 0, 1, 0],
+            [0, 0, 1, 0]
+        ]
+    ]
 }
 
 
-composite_config2 = {
+composite_config3 = {
     "id":1,
-    "name":"composition2",
+    "name":"composition1",
     "board":np.array([
     [0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 1, 1, 0, 0],

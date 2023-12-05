@@ -1,0 +1,223 @@
+'''
+For a given mini-environment and a set of sub-goals, extract policy data for each subgoal
+'''
+
+import numpy as np
+import random
+import sys
+
+import torch.nn as nn
+import torch
+import torch.nn.functional as F
+
+from torch.distributions import Categorical
+from dataloaders.parallel_envs import ParallelEnvironments
+
+
+class LowerPolicyTrainer(nn.Module):
+    def __init__(self, env_handler, device, batch_size, max_timesteps):
+        '''
+        define model constants and hyperparams
+        '''
+        super().__init__()
+
+        # Batched environment class
+        self.env = env_handler
+
+        # Logger for plots
+        self.epoch_rewards = []
+        self.epoch_critic_losses = []
+        self.epoch_actor_losses = []
+
+        # Model params
+        self.top_down_ip_sz = 16
+        self.top_down_op_sz = 64
+        self.obs_space = 9
+        self.action_space = 4
+        self.max_timesteps = max_timesteps
+        self.device = device
+        self.batch_size = batch_size
+        self.l2_lambda = 0.001
+
+        # Top down action hypernet H_a
+        self.hypernet = ActionHypernetwork(self.top_down_ip_sz, self.top_down_op_sz)
+
+        # Lower level policy f_a
+        self.policy = PolicyRNN(self.top_down_op_sz, device, batch_size,
+                            self.obs_space, self.action_space).to(device)
+        
+        self.critic = StateValueCritic(self.obs_space, self.top_down_op_sz)
+
+    def forward(self):
+        '''
+        Take actions based on current policy and send these actions to data handler
+        higher_actions.shape = (batch_sz, num_features * num_vectors)
+        '''
+        vars = {
+            "log_probs":[], "mask":[], "reward":[], "l2_logits":[], "critic":[]
+        }
+
+        # Hypernet
+        higher_actions = self.env.get_higher_actions()
+        top_down_weights = self.hypernet(higher_actions)
+        observations = self.env.batch_reset()
+
+        for i in range(self.max_timesteps):
+            
+            # On-Policy Actions
+            action_logits = self.policy(observations, top_down_weights)
+            distributions = Categorical(logits=action_logits)
+            actions = distributions.sample()
+            log_probs = distributions.log_prob(actions)
+            
+            # L2 constraint on action logits
+            l2 = torch.sum(torch.square(action_logits), axis=1)
+
+            # Acting in the Environment
+            next_obs, rewards, mask = self.env.batch_step(actions)
+
+            # Critic values
+            values = self.critic(next_obs, top_down_weights)
+
+            # Update state
+            observations = next_obs
+
+            # Track the variables for updates
+            vars["log_probs"].append(log_probs)
+            vars["l2_logits"].append(l2)
+            vars["reward"].append(rewards)
+            vars["mask"].append(mask)
+            vars["critic"].append(values)
+    
+        return self.compute_losses(vars)
+
+    def compute_losses(self, vars):
+        rewards = torch.stack(vars["reward"])
+        l2 = torch.stack(vars["l2_logits"])
+        mask = torch.stack(vars["mask"])
+        log_probs = torch.squeeze(torch.stack(vars["critic"]))
+        critic_values = torch.squeeze(torch.stack(vars["critic"]))
+
+        self.epoch_rewards.append(torch.mean(torch.sum(rewards, axis=0)).detach().cpu().numpy())
+        
+        discounted_returns = self.discounted_rewards(rewards) - critic_values.detach()
+        log_probs = log_probs * mask
+
+        intermediate = torch.sum(log_probs * discounted_returns, axis=0)
+        # print("here1:", intermediate.shape, l2.shape, log_probs.shape, discounted_returns.shape)
+
+        actor_loss = torch.mean(l2 * self.l2_lambda) \
+                    - torch.mean(torch.sum(log_probs * discounted_returns, axis=0))
+
+        critic_loss = torch.mean(torch.sum(torch.square(discounted_returns.detach() - critic_values), axis=0))
+        
+        self.epoch_actor_losses.append(actor_loss.detach().cpu().numpy())
+        self.epoch_critic_losses.append(critic_loss.detach().cpu().numpy())
+        
+        # print("Intermediate returns : \n", l2.shape, mask.shape, log_probs.shape)
+        # discounted_returns = discounted_returns - critic_values.detach()
+        return actor_loss, critic_loss
+
+    def discounted_rewards(self, rewards):
+        GAMMA = 0.99
+        R = 0
+        eps = np.finfo(np.float32).eps.item()
+        returns = []
+        
+        rewards_ = rewards.detach().cpu().numpy()
+        # print("raw rewards = ", rewards_)
+        for r in rewards_[::-1]:
+            R = r + GAMMA*R
+            returns.insert(0, R)
+        
+        returns = torch.from_numpy(np.array(returns)).to(self.device)
+        discounted_returns = (returns - returns.mean(axis=0)) / (returns.std(axis=0) + eps)
+
+        return discounted_returns
+
+class ActionHypernetwork(nn.Module):
+    def __init__(self, top_down_ip_sz, top_down_op_sz):
+        super().__init__()
+        
+        self.action_hypernet = nn.Sequential(
+            nn.Linear(top_down_ip_sz, 128),
+            nn.ReLU(),
+            nn.Linear(128, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, top_down_op_sz)
+        )
+    
+    def forward(self, top_down_inputs):
+        
+        top_down_outputs = self.action_hypernet(top_down_inputs)
+        # print(top_down_outputs.detach().cpu().numpy())
+
+        return top_down_outputs
+
+
+class StateValueCritic(nn.Module):
+    def __init__(self, obs_space, top_down_sz):
+        super().__init__()
+
+        self.obs_space = obs_space
+        self.top_down_sz = top_down_sz
+
+        self.critic = nn.Sequential(
+            nn.Linear(obs_space+top_down_sz, 256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.ReLU(),
+            nn.Linear(128, 1)
+        )
+    
+    def forward(self, observations, top_down_weights):
+        
+        inputs = torch.cat((observations, top_down_weights), dim=1)
+        value = self.critic(inputs)
+
+        return value
+
+
+class PolicyRNN(nn.Module):
+    '''
+    Lower level policy conditioned on top down weights
+    '''
+    def __init__(self, top_down_units, device, batch_size, inp, out):
+        super().__init__()
+
+        self.top_down_units = top_down_units
+        self.device = device
+        self.batch_size = batch_size
+        self.input_shape = inp
+        self.output_shape = self.num_actions = out
+        
+        self.rnn_hidden = 64
+        self.hidden2 = 128
+        self.hidden3 = 64
+        self.num_layers = 1
+
+        self.rnn = nn.RNN(input_size=self.top_down_units+self.input_shape,
+                        hidden_size=self.rnn_hidden, 
+                        num_layers=self.num_layers,
+                        nonlinearity='tanh',
+                        dropout=0.0)
+
+        self.decoder1 = nn.Linear(self.rnn_hidden, self.hidden2)
+        self.decoder2 = nn.Linear(self.hidden2, self.output_shape)
+
+    def forward(self, observations, top_down_weights):
+        '''
+        batch forward function
+        '''
+        # print(observations.shape, top_down_weights.shape)
+        inp = torch.cat((observations, top_down_weights), dim=1)
+        # print("Input shape after concat : ", inp.shape)
+        out, _ = self.rnn(inp)
+        out = F.relu(self.decoder1(out))
+        action_logits = F.relu(self.decoder2(out))
+        # print(f"Action probs: ", action_logits.shape)
+
+        return action_logits
+    
