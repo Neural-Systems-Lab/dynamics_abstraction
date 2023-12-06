@@ -15,7 +15,7 @@ from dataloaders.parallel_envs import ParallelEnvironments
 
 # Global constants
 EPOCHS = 1000
-BATCH_SIZE = 2
+BATCH_SIZE = 30
 MAX_TIMESTEPS = 25
 HYPER_LR = 0.001
 POLICY_LR = 0.0005
