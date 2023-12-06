@@ -14,19 +14,19 @@ from models.action_network import LowerPolicyTrainer
 from dataloaders.parallel_envs import ParallelEnvironments
 
 # Global constants
-EPOCHS = 100
-BATCH_SIZE = 40
+EPOCHS = 1000
+BATCH_SIZE = 2
 MAX_TIMESTEPS = 25
-HYPER_LR = 0.005
-POLICY_LR = 0.001
-CRITIC_LR = 0.005
+HYPER_LR = 0.001
+POLICY_LR = 0.0005
+CRITIC_LR = 0.01
 LOAD_PATH = "../saved_models/action_network/dec_3_run_1_embedding.state"
 SAVE_PATH = "../saved_models/action_network/dec_3_run_1_embedding.state"
 SAVE_FILES = "../plots/action_network/"
 device = torch.device("mps")
 
 # Environments to use
-env_configs = [c1, c2]
+env_configs = [c1]
 
 data_handler = ParallelEnvironments(env_configs, BATCH_SIZE, device)
 model = LowerPolicyTrainer(data_handler, device, BATCH_SIZE, MAX_TIMESTEPS).to(device)
@@ -51,11 +51,12 @@ for epoch in range(EPOCHS):
     policy_optimizer.zero_grad()
     critic_optimizer.zero_grad()
 
-    loss = actor_loss + critic_loss
-    loss.backward()
+    # loss = actor_loss + critic_loss
+    actor_loss.backward()
+    # loss.backward()
     hypernet_optimizer.step()
     policy_optimizer.step()
-    critic_optimizer.step()
+    # critic_optimizer.step()
     
     if (epoch+1) % 5 == 0:
         plot_(np.squeeze(model.epoch_rewards))

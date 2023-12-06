@@ -37,7 +37,7 @@ class LowerPolicyTrainer(nn.Module):
         self.max_timesteps = max_timesteps
         self.device = device
         self.batch_size = batch_size
-        self.l2_lambda = 0.001
+        self.l2_lambda = 0
 
         # Top down action hypernet H_a
         self.hypernet = ActionHypernetwork(self.top_down_ip_sz, self.top_down_op_sz)
@@ -61,6 +61,7 @@ class LowerPolicyTrainer(nn.Module):
         higher_actions = self.env.get_higher_actions()
         top_down_weights = self.hypernet(higher_actions)
         observations = self.env.batch_reset()
+        self.policy.init_hidden()
 
         for i in range(self.max_timesteps):
             
@@ -70,6 +71,9 @@ class LowerPolicyTrainer(nn.Module):
             actions = distributions.sample()
             log_probs = distributions.log_prob(actions)
             
+            if i % 10 == 0:
+                print(action_logits.detach().cpu().numpy())
+                # print(action_logits[20].detach().cpu().numpy())
             # L2 constraint on action logits
             l2 = torch.sum(torch.square(action_logits), axis=1)
 
@@ -97,19 +101,23 @@ class LowerPolicyTrainer(nn.Module):
         mask = torch.stack(vars["mask"])
         log_probs = torch.squeeze(torch.stack(vars["critic"]))
         critic_values = torch.squeeze(torch.stack(vars["critic"]))
-
+        # print("rewards : ", rewards.shape)
+        # print("rewards : ", torch.sum(rewards, axis=0))
         self.epoch_rewards.append(torch.mean(torch.sum(rewards, axis=0)).detach().cpu().numpy())
         
-        discounted_returns = self.discounted_rewards(rewards) - critic_values.detach()
+        discounted_returns = self.discounted_rewards(rewards) #- critic_values.detach()
         log_probs = log_probs * mask
 
-        intermediate = torch.sum(log_probs * discounted_returns, axis=0)
-        # print("here1:", intermediate.shape, l2.shape, log_probs.shape, discounted_returns.shape)
+        # print("returns : ", torch.t(discounted_returns), discounted_returns.shape)
+        # print("Log probs : ", log_probs.detach().cpu().numpy().T)
+        # intermediate = torch.sum(log_probs * discounted_returns, axis=0)
+        # print("here1:", intermediate)
+        # print(torch.t(mask), mask.shape)
 
         actor_loss = torch.mean(l2 * self.l2_lambda) \
                     - torch.mean(torch.sum(log_probs * discounted_returns, axis=0))
 
-        critic_loss = torch.mean(torch.sum(torch.square(discounted_returns.detach() - critic_values), axis=0))
+        critic_loss = torch.mean(torch.sum(torch.square(discounted_returns - critic_values), axis=0))
         
         self.epoch_actor_losses.append(actor_loss.detach().cpu().numpy())
         self.epoch_critic_losses.append(critic_loss.detach().cpu().numpy())
@@ -206,18 +214,24 @@ class PolicyRNN(nn.Module):
 
         self.decoder1 = nn.Linear(self.rnn_hidden, self.hidden2)
         self.decoder2 = nn.Linear(self.hidden2, self.output_shape)
+        self.hidden_units = torch.zeros(1, self.batch_size, self.rnn_hidden).to(self.device)
+
+    def init_hidden(self):
+        self.hidden_units = torch.zeros(1, self.batch_size, self.rnn_hidden).to(self.device)
 
     def forward(self, observations, top_down_weights):
         '''
         batch forward function
         '''
         # print(observations.shape, top_down_weights.shape)
-        inp = torch.cat((observations, top_down_weights), dim=1)
-        # print("Input shape after concat : ", inp.shape)
-        out, _ = self.rnn(inp)
+        inp = torch.unsqueeze(torch.cat((observations, top_down_weights), dim=1), dim=0)
+        # print("Input and hidden shape after concat and unsqueeze: ", \
+        #     inp.shape, self.hidden_units.shape)
+        out, new_hidden = self.rnn(inp, self.hidden_units)
         out = F.relu(self.decoder1(out))
-        action_logits = F.relu(self.decoder2(out))
+        action_logits = self.decoder2(out)
         # print(f"Action probs: ", action_logits.shape)
+        self.hidden_units = new_hidden
 
-        return action_logits
+        return torch.squeeze(action_logits)
     
