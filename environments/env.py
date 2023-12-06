@@ -106,6 +106,7 @@ class SimpleGridEnvironment:
         reward, end = self.reward_function(next_state)
         if end==0:
             self.episode_end = True
+            end = 1
         
         self.episode_data.append((self.state, action, next_state, reward))
         self.state = next_state

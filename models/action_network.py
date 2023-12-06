@@ -72,7 +72,7 @@ class LowerPolicyTrainer(nn.Module):
             log_probs = distributions.log_prob(actions)
             
             if i % 10 == 0:
-                print(action_logits.detach().cpu().numpy())
+                print(action_logits[2].detach().cpu().numpy())
                 # print(action_logits[20].detach().cpu().numpy())
             # L2 constraint on action logits
             l2 = torch.sum(torch.square(action_logits), axis=1)
@@ -99,7 +99,8 @@ class LowerPolicyTrainer(nn.Module):
         rewards = torch.stack(vars["reward"])
         l2 = torch.stack(vars["l2_logits"])
         mask = torch.stack(vars["mask"])
-        log_probs = torch.squeeze(torch.stack(vars["critic"]))
+        # print(mask)
+        log_probs = torch.squeeze(torch.stack(vars["log_probs"]))
         critic_values = torch.squeeze(torch.stack(vars["critic"]))
         # print("rewards : ", rewards.shape)
         # print("rewards : ", torch.sum(rewards, axis=0))
@@ -114,9 +115,7 @@ class LowerPolicyTrainer(nn.Module):
         # print("here1:", intermediate)
         # print(torch.t(mask), mask.shape)
 
-        actor_loss = torch.mean(l2 * self.l2_lambda) \
-                    - torch.mean(torch.sum(log_probs * discounted_returns, axis=0))
-
+        actor_loss = - torch.mean(torch.sum(log_probs * discounted_returns, axis=0)) #+ torch.mean(l2 * self.l2_lambda) 
         critic_loss = torch.mean(torch.sum(torch.square(discounted_returns - critic_values), axis=0))
         
         self.epoch_actor_losses.append(actor_loss.detach().cpu().numpy())
@@ -142,6 +141,28 @@ class LowerPolicyTrainer(nn.Module):
         discounted_returns = (returns - returns.mean(axis=0)) / (returns.std(axis=0) + eps)
 
         return discounted_returns
+    
+    @torch.no_grad
+    def execute_policy(self, env, higher_actions):
+        
+        actions = []
+        rewards = []
+        state = torch.tensor(env.get_pomdp_state()).to(self.device)
+        top_down_weights = self.hypernet(higher_actions)
+        self.policy.init_hidden()
+        for i in range(self.max_timesteps):
+
+            action_logits = self.policy(state, top_down_weights)
+            action = torch.argmax(action_logits)
+            next_state, reward, end = env.step(action.detach().cpu().numpy())
+            state = torch.tensor(next_state).to(self.device)
+            actions.append(action.detach().cpu().numpy())
+            rewards.append(reward)
+            if end == 0:
+                break
+
+        return env, actions, rewards
+
 
 class ActionHypernetwork(nn.Module):
     def __init__(self, top_down_ip_sz, top_down_op_sz):
