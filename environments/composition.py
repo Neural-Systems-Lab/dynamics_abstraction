@@ -12,9 +12,8 @@ from environments.pomdp_config import *
 
 class CompositionGrid():
     def __init__(self, config, \
-                rows=5, columns=10, block_size=(5, 5), goal=None):
+                rows=5, columns=9, block_size=(5, 5), goal=None):
         
-        print(config)
         # Define global constants
         self.config = config
         self.walls = []
@@ -27,6 +26,7 @@ class CompositionGrid():
         self.columns = columns
         self.fx = block_size[0] # frame width
         self.fy = block_size[1] # frame height
+        self.num_blocks = config["num_blocks"]
 
         # Define global variables
         self.board = config["board"]
@@ -34,33 +34,61 @@ class CompositionGrid():
         self.goal = None
 
         # Find walls and valid positions in the grid
-        self.wall_finder()
+        self.walls = self.wall_finder()
         
         # Map each position to a reference framed one hot
         # Later we will map to an image instead
-        self.one_hots = self.map_pos_to_one_hot()
-        
-        # print(self.one_hots)
-        # print(self.higher_states)
+        # self.one_hots, self.higher_states = self.map_pos_to_one_hot()
+        self.higher_states = self.map_higher_states()
 
-        if goal == None:
-            self.goal = random.choice(self.valid_pos)
-        else:
-            self.goal = goal
+        print(self.higher_states)
+
 
     def wall_finder(self):
 
         for i in range(self.rows):
             for j in range(self.columns):
-                if self.board[i][j] != 0:
+                if self.board[i][j] == EMPTY_PIXEL:
                     self.valid_pos.append((i, j))
                 else:
                     self.walls.append((i, j))
+        
+        return self.walls
 
+    def get_higher_token(self):
+        if self.state == None:
+            print("Init Error. Please reset the board to use for the first time")
+            return 0
+        return self.higher_states[self.state]
+    
+    def map_higher_states(self):
+        higher_ = []
+
+        for i in range(self.num_blocks):
+            one_hot = np.zeros((self.num_blocks))
+            one_hot[i] = 1
+            higher_.append(one_hot)
+        
+        pos_to_higher = {}
+
+        higher_rows = self.rows/(self.fx-1)
+        higher_cols = self.columns/(self.fy-1)
+
+        for i in range(0, higher_rows):
+            for j in range(0, higher_cols):
+                counter = 0 # Higher state counter
+                for x in range(self.fx):
+                    for y in range(self.fy):
+                        pass
+
+        return pos_to_higher
+
+
+        
     def map_pos_to_one_hot(self):
         
-        assert self.rows % self.fx == 0
-        assert self.columns % self.fy == 0
+        # assert self.rows % self.fx == 0
+        # assert self.columns % self.fy == 0
         
         higher_state_counter = 0
         for i in range(0, self.rows, self.fx):
@@ -69,13 +97,15 @@ class CompositionGrid():
                 for x in range(self.fx):
                     for y in range(self.fy):
                         one_hot = np.zeros((self.fx*self.fy))
+                        one_hot_ = np.zeros((self.num_blocks))
                         one_hot[counter] = 1
+                        one_hot_[higher_state_counter] = 1
                         self.one_hots[(i+x, j+y)] = one_hot
-                        self.higher_states[(i+x, j+y)] = higher_state_counter
+                        self.higher_states[(i+x, j+y)] = one_hot_
                         counter += 1
                 higher_state_counter += 1
         
-        return self.one_hots
+        return self.one_hots, self.higher_states
 
     def get_pomdp_state(self):
         # Extract a 3 x 3 patch around the current state
@@ -146,6 +176,9 @@ class CompositionGrid():
         else:
             return STEP_REWARD, 1
 
+    def get_global_coordinates(self):
+        pass
+
     def plot_board(self, board=None, save="../plots/envs/", name="composition1"):
         plt.clf()
         plt.close()
@@ -153,13 +186,13 @@ class CompositionGrid():
             _board = board
         else:
             _board = self.board.copy()
-        cmap = colors.ListedColormap(['gray', 'black', 'red', 'green'])
+        cmap = colors.ListedColormap(['black', 'gray', 'red', 'green'])
         bounds=[0,1,3,5]
         norm = colors.BoundaryNorm(bounds, cmap.N)
         fig, ax = plt.subplots()
         ax.xaxis.set_ticklabels([])
         ax.yaxis.set_ticklabels([])
-        ax.grid(which='major', axis='both', linestyle='-', color='gray', linewidth=2)
+        ax.grid(which='major', axis='both', linestyle='-', color='darkgray', linewidth=2)
         ax.set_xticks(np.arange(-0.5, 100.5, 1))
         ax.set_yticks(np.arange(-0.5, 100.5, 1))
 

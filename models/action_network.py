@@ -15,7 +15,7 @@ from dataloaders.parallel_envs import ParallelEnvironments
 
 
 class LowerPolicyTrainer(nn.Module):
-    def __init__(self, env_handler, device, batch_size, max_timesteps):
+    def __init__(self, device, batch_size, max_timesteps, env_handler=None):
         '''
         define model constants and hyperparams
         '''
@@ -144,7 +144,9 @@ class LowerPolicyTrainer(nn.Module):
     
     @torch.no_grad
     def execute_policy(self, env, higher_actions):
-        
+        '''
+        Inference of optimal actions from learnt policy
+        '''
         actions = []
         rewards = []
         state = torch.tensor(env.get_pomdp_state()).to(self.device)

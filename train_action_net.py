@@ -19,9 +19,9 @@ BATCH_SIZE = 40
 MAX_TIMESTEPS = 20
 HYPER_LR = 0.0005
 POLICY_LR = 0.001
-CRITIC_LR = 0.01
-LOAD_PATH = "../saved_models/action_network/dec_6_run_1_embedding.state"
-SAVE_PATH = "../saved_models/action_network/dec_6_run_1_embedding.state"
+CRITIC_LR = 0.001
+LOAD_PATH = "../saved_models/action_network/dec_6_run_3_action_embedding.state"
+SAVE_PATH = "../saved_models/action_network/dec_6_run_3_action_embedding.state"
 SAVE_FILES = "../plots/action_network/"
 device = torch.device("mps")
 
@@ -29,7 +29,7 @@ device = torch.device("mps")
 env_configs = [c1, c2]
 
 data_handler = ParallelEnvironments(env_configs, BATCH_SIZE, device)
-model = LowerPolicyTrainer(data_handler, device, BATCH_SIZE, MAX_TIMESTEPS).to(device)
+model = LowerPolicyTrainer(device, BATCH_SIZE, MAX_TIMESTEPS, data_handler).to(device)
 
 try:
     model.load_state_dict(torch.load(LOAD_PATH))
