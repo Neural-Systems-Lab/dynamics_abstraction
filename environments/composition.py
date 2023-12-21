@@ -71,15 +71,27 @@ class CompositionGrid():
         
         pos_to_higher = {}
 
-        higher_rows = self.rows/(self.fx-1)
-        higher_cols = self.columns/(self.fy-1)
+        print(self.rows, self.fx, self.columns, self.fy)
+        higher_rows = int((self.rows-1)/(self.fx-1))
+        higher_cols = int((self.columns-1)/(self.fy-1))
 
+        print( "In mapping function : ", higher_rows, higher_cols)
+        counter = 0 # Higher state counter
         for i in range(0, higher_rows):
             for j in range(0, higher_cols):
-                counter = 0 # Higher state counter
-                for x in range(self.fx):
-                    for y in range(self.fy):
-                        pass
+                
+                startx = i * (self.fx - 1)
+                starty = j * (self.fy - 1)
+                for x in range(startx, startx+self.fx):
+                    for y in range(starty, starty+self.fy):
+                        one_hot = np.zeros((self.num_blocks))
+                        one_hot[counter] = 1
+                        if (x, y) not in pos_to_higher.keys():
+                            pos_to_higher[(x, y)] = []
+                        
+                        pos_to_higher[(x, y)].append(one_hot)
+                
+                counter += 1
 
         return pos_to_higher
 

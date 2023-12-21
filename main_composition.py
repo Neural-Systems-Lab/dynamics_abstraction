@@ -60,4 +60,7 @@ except:
 
 
 higher_state_model = AbstractStateNetwork(9, composite_config1["num_blocks"])
+env.reset()
 print(env.get_higher_token())
+
+
