@@ -8,22 +8,12 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
-
 from environments.composition import CompositionGrid
 from models.embedding_model import LearnableEmbedding
 from models.action_network import LowerPolicyTrainer
 from environments.pomdp_config import *
-from models.higher_state_network import AbstractStateNetwork
+from models.abstract_state_network import AbstractStateNetwork, AbstractStateDataGenerator
 # from dataloaders.dataloader_compositional import *
-
-'''
-Higher level world model
-
-(higher_state S + higher_token, higher_action) -> (higher_state_next + higher_token_next)
-
-procedure:
-
-'''
 
 
 ###################
@@ -37,9 +27,10 @@ MAX_TIMESTEPS = 20
 LOWER_STATE_MODEL_PATH = "/Users/vsathish/Documents/Quals/saved_models/pomdp/oct_25_run_1_embedding.state"
 LOWER_ACTION_MODEL_PATH = "/Users/vsathish/Documents/Quals/saved_models/action_network/dec_6_run_1_embedding.state"
 SAVE_PATH = "/Users/vsathish/Documents/Quals/saved_models/pomdp/oct_25_run_1_embedding.state"
+COMPOSITION_CONFIG = composite_config2
 
 # Define env
-env = CompositionGrid(composite_config1)
+env = CompositionGrid(COMPOSITION_CONFIG)
 env.plot_board()
 
 
@@ -58,9 +49,10 @@ try:
 except:
     print("COULD NOT LOAD ACTION NETWORK")
 
-
-higher_state_model = AbstractStateNetwork(9, composite_config1["num_blocks"])
+higher_state_model = AbstractStateNetwork(9, COMPOSITION_CONFIG["num_blocks"])
 env.reset()
-print(env.get_higher_token())
+print(env.state, env.get_higher_token())
 
-
+# Generate data for the state network
+datagen = AbstractStateDataGenerator(COMPOSITION_CONFIG)
+higher_state_data = datagen.generate_data()

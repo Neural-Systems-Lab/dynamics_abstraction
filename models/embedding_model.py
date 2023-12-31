@@ -37,7 +37,7 @@ class LearnableEmbedding(nn.Module):
         self.temporal_lr = 0.001
         
         # Other vars
-        self.infer_max_iter = 10
+        self.infer_max_iter = 20
         self.l2_lambda = 0.001
         self.l1_lambda = 0.0
 

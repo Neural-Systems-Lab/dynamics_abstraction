@@ -17,6 +17,14 @@ OPTION_STEP_REWARD = -0.5
 
 ENV_SAVE_PATH = "/Users/vsathish/Documents/Quals/plots/envs/"
 
+# Actions
+action_map = {
+    0:"left",
+    1:"right",
+    2:"down",
+    3:"up"
+}
+
 c1 = {
     "id":1,
     "name": "Base5 Config 1",
@@ -42,7 +50,11 @@ c1 = {
             [0, 0, 0, 1],
             [0, 0, 1, 0]
         ]
+    ],
+    "relative_actions":[
+        
     ]
+
 }
 
 
@@ -80,6 +92,8 @@ composite_config1 = {
     "name":"composition1",
     "num_blocks":2,
     "block_size":(5, 5),
+    "centers": [[-0.08769471, -0.09572088,  0.10177673,  0.15783134],
+                [ 0.06338196,  0.060405,   -0.06239086, -0.10631932]],
     "board":np.array([
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, GOAL_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
@@ -94,6 +108,8 @@ composite_config2 = {
     "name":"composition2",
     "num_blocks":3,
     "block_size":(5, 5),
+    "centers": [ [-0.08769471, -0.09572088,  0.10177673,  0.15783134],
+                [ 0.06338196,  0.060405,   -0.06239086, -0.10631932]],
     "board":np.array([
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],

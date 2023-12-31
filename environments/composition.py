@@ -11,8 +11,7 @@ from environments.pomdp_config import *
 
 
 class CompositionGrid():
-    def __init__(self, config, \
-                rows=5, columns=9, block_size=(5, 5), goal=None):
+    def __init__(self, config, goal=None):
         
         # Define global constants
         self.config = config
@@ -22,14 +21,14 @@ class CompositionGrid():
         self.higher_states = {}
         self.episode_data = []
         self.historic_data = []
-        self.rows = rows
-        self.columns = columns
-        self.fx = block_size[0] # frame width
-        self.fy = block_size[1] # frame height
+
+        self.fx, self.fy = config["block_size"] # composition width & height
         self.num_blocks = config["num_blocks"]
 
         # Define global variables
         self.board = config["board"]
+        self.rows, self.columns = self.board.shape
+        # print(self.rows, self.columns)
         self.state = None
         self.goal = None
 
@@ -37,12 +36,10 @@ class CompositionGrid():
         self.walls = self.wall_finder()
         
         # Map each position to a reference framed one hot
-        # Later we will map to an image instead
         # self.one_hots, self.higher_states = self.map_pos_to_one_hot()
         self.higher_states = self.map_higher_states()
 
         print(self.higher_states)
-
 
     def wall_finder(self):
 
@@ -54,6 +51,13 @@ class CompositionGrid():
                     self.walls.append((i, j))
         
         return self.walls
+
+    def get_state(self):
+        if self.state == None:
+            print("Init Error. Please reset the board to use for the first time")
+            return 0
+
+        return self.state
 
     def get_higher_token(self):
         if self.state == None:
@@ -94,30 +98,6 @@ class CompositionGrid():
                 counter += 1
 
         return pos_to_higher
-
-
-        
-    def map_pos_to_one_hot(self):
-        
-        # assert self.rows % self.fx == 0
-        # assert self.columns % self.fy == 0
-        
-        higher_state_counter = 0
-        for i in range(0, self.rows, self.fx):
-            for j in range(0, self.columns, self.fy):
-                counter = 0
-                for x in range(self.fx):
-                    for y in range(self.fy):
-                        one_hot = np.zeros((self.fx*self.fy))
-                        one_hot_ = np.zeros((self.num_blocks))
-                        one_hot[counter] = 1
-                        one_hot_[higher_state_counter] = 1
-                        self.one_hots[(i+x, j+y)] = one_hot
-                        self.higher_states[(i+x, j+y)] = one_hot_
-                        counter += 1
-                higher_state_counter += 1
-        
-        return self.one_hots, self.higher_states
 
     def get_pomdp_state(self):
         # Extract a 3 x 3 patch around the current state
@@ -188,8 +168,28 @@ class CompositionGrid():
         else:
             return STEP_REWARD, 1
 
-    def get_global_coordinates(self):
-        pass
+    def map_pos_to_one_hot(self):
+        
+        # assert self.rows % self.fx == 0
+        # assert self.columns % self.fy == 0
+        
+        higher_state_counter = 0
+        for i in range(0, self.rows, self.fx):
+            for j in range(0, self.columns, self.fy):
+                counter = 0
+                for x in range(self.fx):
+                    for y in range(self.fy):
+                        one_hot = np.zeros((self.fx*self.fy))
+                        one_hot_ = np.zeros((self.num_blocks))
+                        one_hot[counter] = 1
+                        one_hot_[higher_state_counter] = 1
+                        self.one_hots[(i+x, j+y)] = one_hot
+                        self.higher_states[(i+x, j+y)] = one_hot_
+                        counter += 1
+                higher_state_counter += 1
+        
+        return self.one_hots, self.higher_states
+
 
     def plot_board(self, board=None, save="../plots/envs/", name="composition1"):
         plt.clf()
