@@ -161,7 +161,7 @@ class LowerRNN(nn.Module):
 
     # Batch forward
     def forward(self, inputs, weights):
-        # print("in forward : " , inputs.shape, weights.shape)
+        print("in forward : " , inputs.shape, weights.shape)
         inp = torch.cat((inputs, weights), dim=2)
         # print(inp.shape)
         out, _ = self.rnn(inp)

@@ -39,7 +39,7 @@ class CompositionGrid():
         # self.one_hots, self.higher_states = self.map_pos_to_one_hot()
         self.higher_states = self.map_higher_states()
 
-        print(self.higher_states)
+        # print(self.higher_states)
 
     def wall_finder(self):
 
@@ -128,34 +128,36 @@ class CompositionGrid():
         # return self.one_hots[self.state]
         return self.get_pomdp_state()
 
-    def step(self, action):
+    def step(self, action, record_step=True):
         
         next_state = self.next_position(action)
         reward, end = self.reward_function(next_state)
         
-        self.episode_data.append((self.state, action, next_state, reward))
+        if record_step:
+            self.episode_data.append((self.state, action, next_state, reward))
         self.state = next_state
         
         # return self.one_hots[self.state].flatten(), reward, end
         return self.get_pomdp_state(), reward, end
         
     def next_position(self, action):
-        # print(action)
-        if action == 0:
+        # Directions look a bit counter intuitive
+        if action == 0: # UP
             nxtState = (self.state[0] - 1, self.state[1])
-        elif action == 1:
+        elif action == 1: # DOWN   
             nxtState = (self.state[0] + 1, self.state[1])
-        elif action == 2:
+        elif action == 2: # LEFT
             nxtState = (self.state[0], self.state[1] - 1)
-        elif action == 3:
+        elif action == 3: # RIGHT
             nxtState = (self.state[0], self.state[1] + 1)
         
         # if next state legal
         if (nxtState[0] >= 0) and (nxtState[0] <= (self.rows -1)):
             if (nxtState[1] >= 0) and (nxtState[1] <= (self.columns -1)):
                 if nxtState not in self.walls:
+                    print("Next state after taking action ", action, " is ", nxtState)
                     return nxtState
-        
+        print("Action ", action, " leads to wall. Hence staying at ", self.state)
         return self.state
     
     def reward_function(self, state):
@@ -191,7 +193,7 @@ class CompositionGrid():
         return self.one_hots, self.higher_states
 
 
-    def plot_board(self, board=None, save="../plots/envs/", name="composition1"):
+    def plot_board(self, board=None, save="../plots/compositional_envs/", name="composition1"):
         plt.clf()
         plt.close()
         if board:

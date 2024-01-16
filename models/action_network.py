@@ -149,18 +149,46 @@ class LowerPolicyTrainer(nn.Module):
         '''
         actions = []
         rewards = []
-        state = torch.tensor(env.get_pomdp_state()).to(self.device)
+        states_list = []
+        state = torch.tensor(env.get_pomdp_state()).to(self.device, dtype=torch.float32)
+        state = torch.unsqueeze(state, dim=0)
+        states_list.append(env.get_state())
+        print("State action shape : ", state.shape, higher_actions.shape)
         top_down_weights = self.hypernet(higher_actions)
+        top_down_weights = torch.unsqueeze(top_down_weights, dim=0)
+        print("Top down weights : ", top_down_weights.shape)
         self.policy.init_hidden()
         for i in range(self.max_timesteps):
-
+            
+            # Here both state and weights are expected to have a batch dimension
             action_logits = self.policy(state, top_down_weights)
             action = torch.argmax(action_logits)
             next_state, reward, end = env.step(action.detach().cpu().numpy())
-            state = torch.tensor(next_state).to(self.device)
+            state = torch.tensor(next_state).to(self.device, dtype=torch.float32)
+            state = torch.unsqueeze(state, dim=0)
+            states_list.append(env.get_state())
+            
             actions.append(action.detach().cpu().numpy())
+            
             rewards.append(reward)
+            
             if end == 0:
+                break
+            
+            # Add a constraint that if the agent is landing on the same state
+            # or hitting a wall repeatedly for 3 times, then end the policy.
+            #  Note that same action can occur multiple times.
+            print(actions)
+            if i > 4 and (states_list[-1] == states_list[-2]) and \
+                (states_list[-1] == states_list[-3]) and \
+                (states_list[-1] == states_list[-4]) and \
+                actions[-1] == actions[-2] == actions[-3] :
+                print("Exiting sub-policy. Repeated state")
+                break
+            
+            # If I reach a junction, this sub-policy ends
+            elif len(env.get_higher_token()) > 1:
+                print("Exiting sub-policy. Option completed")
                 break
 
         return env, actions, rewards
@@ -246,7 +274,7 @@ class PolicyRNN(nn.Module):
         '''
         batch forward function
         '''
-        # print(observations.shape, top_down_weights.shape)
+        print(observations.shape, top_down_weights.shape)
         inp = torch.unsqueeze(torch.cat((observations, top_down_weights), dim=1), dim=0)
         # print("Input and hidden shape after concat and unsqueeze: ", \
         #     inp.shape, self.hidden_units.shape)
