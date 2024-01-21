@@ -147,6 +147,7 @@ class LowerPolicyTrainer(nn.Module):
         '''
         Inference of optimal actions from learnt policy
         '''
+        print("################## BEGIN EXECUTE POLICY ##################")
         actions = []
         rewards = []
         states_list = []
@@ -191,7 +192,7 @@ class LowerPolicyTrainer(nn.Module):
                 print("Exiting sub-policy. Option completed")
                 break
 
-        return env, actions, rewards
+        return env, actions, rewards, end
 
 
 class ActionHypernetwork(nn.Module):

@@ -99,6 +99,16 @@ class CompositionGrid():
 
         return pos_to_higher
 
+    def planning_metric(self, next_state_id):
+        # print(self.higher_states)
+
+        for loc in self.higher_states.keys():
+            if np.argmax(self.higher_states[loc][0]) == next_state_id:
+                x1, y1 = loc
+                x2, y2 = self.goal
+                return abs(x1-x2) + abs(y1-y2)
+    
+
     def get_pomdp_state(self):
         # Extract a 3 x 3 patch around the current state
         # Return a flattened version of the patch

@@ -51,7 +51,7 @@ c1 = {
             [0, 0, 1, 0]
         ]
     ],
-    "relative_actions":[
+    "teleports":[
         [2],
         [3]
     ]
@@ -91,7 +91,7 @@ c2 = {
             [0, 0, 1, 0]
         ]
     ],
-    "relative_actions":[
+    "teleports":[
         [2],
         [1],
         [0]
@@ -132,7 +132,7 @@ c3 = {
             [0, 0, 1, 0]
         ]
     ],
-    "relative_actions":[
+    "teleports":[
         [2],
         [1],
         [0]
@@ -172,7 +172,7 @@ c4 = {
             [0, 0, 1, 0]
         ]
     ],
-    "relative_actions":[
+    "teleports":[
         [2],
         [1],
         [0]
@@ -207,7 +207,7 @@ composite_config2 = {
     "board":np.array([
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
-    [GOAL_PIXEL, EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
+    [EMPTY_PIXEL, EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL]])
 }
