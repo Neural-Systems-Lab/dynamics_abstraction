@@ -14,16 +14,16 @@ from models.action_network import LowerPolicyTrainer
 from dataloaders.parallel_envs import ParallelEnvironments
 
 # Global constants
-EPOCHS = 500
-BATCH_SIZE = 40
+EPOCHS = 200
+BATCH_SIZE = 42
 MAX_TIMESTEPS = 20
 HYPER_LR = 0.0005
 POLICY_LR = 0.001
 CRITIC_LR = 0.001
-LOAD_PATH = "../saved_models/action_network/dec_6_run_3_action_embedding.state"
-SAVE_PATH = "../saved_models/action_network/dec_6_run_3_action_embedding.state"
+LOAD_PATH = "../saved_models/action_network/jan_23_run_1_action_embedding.state"
+SAVE_PATH = "../saved_models/action_network/jan_23_run_1_action_embedding.state"
 SAVE_FILES = "../plots/action_network/"
-device = torch.device("mps")
+device = torch.device("cuda")
 
 # Environments to use
 env_configs = [c1, c2]

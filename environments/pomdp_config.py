@@ -8,14 +8,14 @@ import numpy as np
 # Pixel inputs to the model
 GOAL_PIXEL = 6
 POS_PIXEL = 1
-WALL_PIXEL = 2
+WALL_PIXEL = 1
 EMPTY_PIXEL = 0
 OBSERVATION_SIZE = (3, 3)
 GOAL_REWARD = 10
 STEP_REWARD = -0.1
 OPTION_STEP_REWARD = -0.5
 
-ENV_SAVE_PATH = "/Users/vsathish/Documents/Quals/plots/base_envs/"
+ENV_SAVE_PATH = "/gscratch/rao/vsathish/quals/plots/base_envs/"
 
 # Actions
 action_map = {
@@ -70,7 +70,7 @@ c2 = {
                 (3, 0),                 (3, 3), (3, 4),
                 (4, 0),                 (4, 3), (4, 4)
     ],
-    "subgoals":[(2, 0), (4, 2), (0, 2)],
+    "subgoals":[(2, 0), (4, 2), (0, 2), (0, 1), (4, 1)],
     "abs_actions":[
         [
             [0, 0, 0, 1],
@@ -89,12 +89,26 @@ c2 = {
             [0, 0, 0, 1],
             [1, 0, 0, 0],
             [0, 0, 1, 0]
+        ],
+        [
+            [0, 0, 0, 1],
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [1, 0, 0, 0]
+        ],
+        [
+            [1, 0, 0, 0],
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0]
         ]
     ],
     "teleports":[
         [2],
         [1],
-        [0]
+        [0],
+        [0],
+        [1]
 
     ]
 }
@@ -130,7 +144,14 @@ c3 = {
             [0, 0, 0, 1],
             [1, 0, 0, 0],
             [0, 0, 1, 0]
+        ],
+        [
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
         ]
+
     ],
     "teleports":[
         [2],
@@ -145,31 +166,25 @@ c4 = {
     "name": "Base5 Config 4",
     "rows": 5,
     "cols": 5,
-    "walls": [  (0, 0),(0, 1),       (0, 4),
-                (1, 0),(1, 1),       (1, 4),
-                (2, 0),(2, 1),                   
-                (3, 0),(3, 1),       (3, 4),
-                (4, 0),(4, 1),       (4, 4)
+    "walls": [  (0, 0),(0, 1),    (0, 3),(0, 4),
+                (1, 0),(1, 1),    (1, 3),(1, 4),
+                (2, 0),(2, 1),    (2, 3),(2, 4),            
+                (3, 0),(3, 1),    (3, 3),(3, 4),
+                (4, 0),(4, 1),    (4, 3),(4, 4)
     ],
     "subgoals":[(2, 0), (4, 2), (0, 2)],
     "abs_actions":[
         [
-            [0, 0, 0, 1],
-            [0, 0, 0, 1],
-            [0, 0, 1, 0],
-            [1, 0, 0, 0]
-        ],
-        [
-            [0, 0, 0, 1],
-            [0, 0, 1, 0],
-            [0, 0, 1, 0],
-            [0, 0, 1, 0]
-        ],
-        [
-            [0, 0, 0, 1],
+            [0, 1, 0, 0],
             [0, 0, 0, 1],
             [1, 0, 0, 0],
             [0, 0, 1, 0]
+        ],
+        [
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
+            [1, 0, 0, 0]
         ]
     ],
     "teleports":[
@@ -186,8 +201,8 @@ composite_config1 = {
     "name":"composition1",
     "num_blocks":2,
     "block_size":(5, 5),
-    "centers": [[ 0.33013344,  0.35932747, -0.31570193,  0.1935255 ],
-                [-0.02549605,  0.0482652,  -0.03164882,  0.02881731]],
+    "centers": [[ 0.11162517,  0.10597038, -0.04626806,  0.1036149 ],
+                [-0.101905,   -0.08235317,  0.02417811, -0.08022156]],
     "board":np.array([
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
@@ -202,8 +217,8 @@ composite_config2 = {
     "name":"composition2",
     "num_blocks":3,
     "block_size":(5, 5),
-    "centers": [[ 0.33013344,  0.35932747, -0.31570193,  0.1935255 ],
-                [-0.02549605,  0.0482652,  -0.03164882,  0.02881731]],
+    "centers": [[ 0.11162517,  0.10597038, -0.04626806,  0.1036149 ],
+                [-0.101905,   -0.08235317,  0.02417811, -0.08022156]],
     "board":np.array([
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],

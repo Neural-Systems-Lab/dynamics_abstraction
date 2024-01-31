@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
-
+import itertools
 
 '''
 Plan in a compositional environment
@@ -19,7 +19,7 @@ class AbstractPlanner():
                 k, device):
         
         # Define global constants
-        self.max_planning_steps = 20
+        self.max_planning_steps = 10
         self.config = config    # Composition config
         self.base_configs = base_configs
         self.device = device
@@ -90,10 +90,51 @@ class AbstractPlanner():
 '''
 Plan within a base environment
 '''
-class BasePlanner():
-    def __init__(self):
-        pass
+class FlatPlanner():
+    def __init__(self, lookahead):
+        self.k = lookahead % 5  # Make sure lookahead is not too large
+        # self.device = device
+        self.max_planning_steps = 25
+    
+    def plan(self, env):
+        
+        counter = 0
+        action_seq = []
+        for i in range(self.max_planning_steps):
+            # Assume a perfect transition model
+            opt_action = self.optimal_transition_(env)
+            opt_action = opt_action[0]
+            # print("Optimal Action : ", opt_action)
+            _, _, end = env.step(opt_action)
+            action_seq.append(opt_action)
+            counter += 1
+            if end == 0:
+                break
+        
+        return action_seq, counter
 
-    def plan(self):
-        pass
+
+    def optimal_transition_(self, env):
+        # current_state = env.state
+        metrics = []
+        action_seq = list(itertools.product([0, 1, 2, 3], repeat=self.k))
+
+        for action_tuples in action_seq:
+            current_state = env.state
+            for action in action_tuples:
+                env.step(action, record_step=False)
+            metrics.append(self.manhattan_distance_(env))
+            env.state = current_state
+
+        print(metrics)
+        optimal_idx = np.argmin(np.array(metrics))
+        print("optimal_action :", optimal_idx)
+        return action_seq[optimal_idx]
+
+
+    def manhattan_distance_(self, env):
+        state = env.state
+        goal = env.goal
+        print("State and Goal : ", state, goal)
+        return np.abs(state[0]-goal[0]) + np.abs(state[1]-goal[1])
 

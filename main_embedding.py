@@ -19,21 +19,20 @@ from models.embedding_model import LearnableEmbedding
 # CONSTANTS
 ###################
 
-device = torch.device("mps")
+device = torch.device("cuda")
 # device = torch.device("cpu")
-HYPER_EPOCHS = 100
-BATCH_SIZE = 50
-WARMUP_EPISODES = 100
-LOAD_PATH = "../saved_models/pomdp/jan_13_run_1_embedding.state"
-SAVE_PATH = "../saved_models/pomdp/jan_13_run_1_embedding.state"
+HYPER_EPOCHS = 50
+BATCH_SIZE = 100
+# WARMUP_EPISODES = 100
+LOAD_PATH = "../saved_models/state_network/jan_24_run_4_embedding.state"
+SAVE_PATH = "../saved_models/state_network/jan_30_run_1_embedding.state"
 #########################################
 # Training a Hypernet Modulated Network
 #########################################
 
 # Transforming data
 
-data1, data2, data3, data4 = get_transitions()
-sys.exit(0)
+data1, data2 = get_transitions()
 x1, y1 = batch_data(data1, BATCH_SIZE)
 x2, y2 = batch_data(data2, BATCH_SIZE)
 
@@ -75,7 +74,8 @@ for epochs in range(HYPER_EPOCHS):
     epoch_loss = []
     print("Epoch : ", epochs)
     
-    for i in range(len(x1)):
+
+    for i in range(len(x1)): # num_trajectories / batch_size
         
         # Ignore predicted and inferred states during training
         hyper_optim.zero_grad()
@@ -96,12 +96,17 @@ for epochs in range(HYPER_EPOCHS):
         print("i = ", i, "loss = ", loss.detach().cpu().numpy())
         epoch_loss.append(loss.detach().cpu().numpy())
         
-    print("Mean Loss : ", np.mean(epoch_loss))
+    print("Mean Loss : ", np.mean(epoch_loss)/(2*STEPS))
     train_loss.append(np.mean(epoch_loss))
 
     if epochs % 10 == 0:
         print("Saving Checkpoint ... ")
         torch.save(model.state_dict(), SAVE_PATH)
+        plt.clf()
+        plt.close()
+        plt.plot(train_loss, label="Embedding")
+        plt.legend()
+        plt.savefig("../plots/state_network/jan_24_embedding_loss.png")
         
 torch.save(model.state_dict(), SAVE_PATH)
 
@@ -112,8 +117,6 @@ torch.save(model.state_dict(), SAVE_PATH)
 plt.clf()
 plt.close()
 
-plt.plot(train_loss, label="Hypernet")
+plt.plot(train_loss, label="Embedding Model")
 plt.legend()
-plt.savefig("../plots/loss.png")
-
-sys.exit(0)
+plt.savefig("../plots/state_network/jan_24_embedding_loss.png")

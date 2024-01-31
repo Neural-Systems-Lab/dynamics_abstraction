@@ -46,14 +46,14 @@ class AbstractStateDataGenerator():
         
         self.base_configs = base_configs
         
-    def reset_state(self, env, goal=None, times=50):
-        env.reset(goal=goal)
+    def reset_state(self, env, start_state=None, goal=None, times=50):
+        env.reset(start=start_state, goal=goal)
         # If the agent is in one of the subgoal state, reset.
         if len(env.get_higher_token()) > 1:
             if times == 0:
                 print("Failed after max tries")
                 return -1
-            return self.reset_state(env, goal, times-1)
+            return self.reset_state(env, start_state, goal, times-1)
     
         return 0
 
@@ -70,6 +70,8 @@ class AbstractStateDataGenerator():
             self.reset_state(env)
             
             current_state, higher_index = self.get_abstract_state(env)
+            if current_state == None:
+                continue
             abstract_action, subgoal = self.get_abstract_action(higher_index)
             next_state, higher_index = self.step(abstract_action, subgoal, env)
             
@@ -105,7 +107,7 @@ class AbstractStateDataGenerator():
         print("################## BEGIN ABS STATE ##################")
         # Infer abstract state from the lower state network
         # Return abstract state + unique_token
-        action_sequence = [0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3] # Walking in circles
+        action_sequence = [0] # Walking in circles
         inference_data_x = []
         inference_data_y = []
         # print(self.env.get_pomdp_state())
@@ -129,13 +131,14 @@ class AbstractStateDataGenerator():
         print(inference_data_x.shape, inference_data_y.shape)
 
         # Use this data to infer the abstract stat
+        # with torch.no_grad():
         loss, _, higher = self.state_model(inference_data_x, inference_data_y, eval_mode=True)
         
         # Min of distances
         center_index = np.argmin(np.linalg.norm(np.expand_dims(higher[-1], axis=0) - self.centers, axis=1))
         higher_state = self.centers[center_index]
         print("Center index : ", center_index)
-        # print("Concatenated distances : ", np.linalg.norm(np.expand_dims(higher[-1], axis=0) - self.centers, axis=1))
+        print("Concatenated distances : ", np.linalg.norm(np.expand_dims(higher[-1], axis=0) - self.centers, axis=1))
 
         # Go back to original state
         env.state = record_init_state
@@ -145,7 +148,7 @@ class AbstractStateDataGenerator():
         unique_token = env.get_higher_token()
         if len(unique_token) > 1:
             print("Something is wrong")
-            sys.exit(0)
+            return None, None
 
         # print("Unique token : ", unique_token)
         higher_state = np.concatenate((higher_state, unique_token[0]), axis=0)

@@ -22,18 +22,18 @@ from models.abstract_state_network import AbstractStateNetwork, AbstractStateDat
 # CONSTANTS
 ###################
 
-device = torch.device("mps")
+device = torch.device("cuda")
 COMPOSITION_CONFIG = composite_config2
 BASE_CONFIGS = [c1, c2]
 HYPER_EPOCHS = 50
 BATCH_SIZE = 1
-INFERENCE_TIMESTEPS = 12
-MAX_TIMESTEPS = 20
+INFERENCE_TIMESTEPS = 1
+MAX_TIMESTEPS = 10
 PLANNING_HORIZON = 1
 
-LOWER_STATE_MODEL_PATH = "/Users/vsathish/Documents/Quals/saved_models/pomdp/oct_25_run_1_embedding.state"
-LOWER_ACTION_MODEL_PATH = "/Users/vsathish/Documents/Quals/saved_models/action_network/dec_6_run_1_embedding.state"
-HIGHER_STATE_MODEL_PATH = "/Users/vsathish/Documents/Quals/saved_models/state_network/jan_20_higher_state_composition2.state"
+LOWER_STATE_MODEL_PATH = "../saved_models/state_network/jan_24_run_3_embedding.state"
+LOWER_ACTION_MODEL_PATH = "../saved_models/action_network/jan_23_run_1_action_embedding.state"
+HIGHER_STATE_MODEL_PATH = "../saved_models/state_network/jan_24_run_1_higher_state_"+COMPOSITION_CONFIG["name"]+".state"
 
 '''
 MPC planning:
@@ -85,18 +85,31 @@ planner = AbstractPlanner(COMPOSITION_CONFIG, BASE_CONFIGS, higher_state_model, 
                         higher_state_util, lower_state_model, action_model, \
                         PLANNING_HORIZON, device)
 
-# Define env
-GOAL = (2, 0)
+# Define environment
 env = CompositionGrid(composite_config2)
-env.plot_board()
+# env.plot_board()
+START_STATE = (2, 0)
+GOALS = [(2, 0), (2, 4), (2, 8), (0, 9), (4, 9), (0, 10), (4, 10)]
 
-# Reset to a non-subgoal state
-higher_state_util.reset_state(env, GOAL)
+# for state in env.valid_pos:
+#     if len(env.higher_states[state]) > 1:
+#         GOALS.append(state)
 
-# Plan
-steps, counter = planner.abstract_plan(env)
-print(counter)
-for s in steps:
-    print(s[0])
-print(GOAL)
+print(GOALS)
+# sys.exit(0)
+counters = []
+for goal in GOALS:
+    print("############## GOAL : ", goal, " ##############")
+    # Reset to a non-subgoal state
+    higher_state_util.reset_state(env, START_STATE, goal)
 
+    # Plan
+    steps, counter = planner.abstract_plan(env)
+    print(counter)
+    counters.append(counter)
+    for s in steps:
+        print(s[0])
+    print(goal)
+
+
+print(counters)

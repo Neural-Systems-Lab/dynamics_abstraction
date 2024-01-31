@@ -142,7 +142,7 @@ class LowerPolicyTrainer(nn.Module):
 
         return discounted_returns
     
-    @torch.no_grad
+    # @torch.no_grad
     def execute_policy(self, env, higher_actions):
         '''
         Inference of optimal actions from learnt policy
@@ -154,7 +154,7 @@ class LowerPolicyTrainer(nn.Module):
         state = torch.tensor(env.get_pomdp_state()).to(self.device, dtype=torch.float32)
         state = torch.unsqueeze(state, dim=0)
         states_list.append(env.get_state())
-        print("State action shape : ", state.shape, higher_actions.shape)
+        # print("State action shape : ", state.shape, higher_actions.shape)
         top_down_weights = self.hypernet(higher_actions)
         top_down_weights = torch.unsqueeze(top_down_weights, dim=0)
         print("Top down weights : ", top_down_weights.shape)
@@ -179,7 +179,7 @@ class LowerPolicyTrainer(nn.Module):
             # Add a constraint that if the agent is landing on the same state
             # or hitting a wall repeatedly for 3 times, then end the policy.
             #  Note that same action can occur multiple times.
-            print(actions)
+            # print(actions)
             if i > 4 and (states_list[-1] == states_list[-2]) and \
                 (states_list[-1] == states_list[-3]) and \
                 (states_list[-1] == states_list[-4]) and \
@@ -275,7 +275,7 @@ class PolicyRNN(nn.Module):
         '''
         batch forward function
         '''
-        print(observations.shape, top_down_weights.shape)
+        # print(observations.shape, top_down_weights.shape)
         inp = torch.unsqueeze(torch.cat((observations, top_down_weights), dim=1), dim=0)
         # print("Input and hidden shape after concat and unsqueeze: ", \
         #     inp.shape, self.hidden_units.shape)

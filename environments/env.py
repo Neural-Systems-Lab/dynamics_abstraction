@@ -8,7 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import colors
 # import cv2
-import mypy 
+# import mypy 
 
 from .pomdp_config import *
 

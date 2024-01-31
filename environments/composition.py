@@ -37,8 +37,10 @@ class CompositionGrid():
         
         # Map each position to a reference framed one hot
         # self.one_hots, self.higher_states = self.map_pos_to_one_hot()
-        self.higher_states = self.map_higher_states()
+        self.higher_states, self.subgoal_states = self.map_higher_states()
 
+        print(self.higher_states)
+        print(self.subgoal_states)
         # print(self.higher_states)
 
     def wall_finder(self):
@@ -74,6 +76,7 @@ class CompositionGrid():
             higher_.append(one_hot)
         
         pos_to_higher = {}
+        subgoals = []
 
         print(self.rows, self.fx, self.columns, self.fy)
         higher_rows = int((self.rows-1)/(self.fx-1))
@@ -94,10 +97,22 @@ class CompositionGrid():
                             pos_to_higher[(x, y)] = []
                         
                         pos_to_higher[(x, y)].append(one_hot)
+
+
+                        # Track possible goals for planning
+                        if x == 0 or y == 0 or x == self.rows-1 \
+                            or y == self.columns-1:
+                            if (x, y) not in self.walls and \
+                                (x, y) not in subgoals:
+                                subgoals.append((x, y))
                 
                 counter += 1
+        for loc in pos_to_higher.keys():
+            if len(pos_to_higher[loc]) > 1 and \
+                loc not in subgoals and loc not in self.walls:
+                    subgoals.append(loc)
 
-        return pos_to_higher
+        return pos_to_higher, subgoals
 
     def planning_metric(self, next_state_id):
         # print(self.higher_states)
@@ -165,9 +180,9 @@ class CompositionGrid():
         if (nxtState[0] >= 0) and (nxtState[0] <= (self.rows -1)):
             if (nxtState[1] >= 0) and (nxtState[1] <= (self.columns -1)):
                 if nxtState not in self.walls:
-                    print("Next state after taking action ", action, " is ", nxtState)
+                    # print("Next state after taking action ", action, " is ", nxtState)
                     return nxtState
-        print("Action ", action, " leads to wall. Hence staying at ", self.state)
+        # print("Action ", action, " leads to wall. Hence staying at ", self.state)
         return self.state
     
     def reward_function(self, state):

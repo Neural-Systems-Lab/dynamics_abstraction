@@ -7,9 +7,9 @@ import sys
 # Network with learnable Stories
 ###########################################
 
-class LearnableStory(nn.Module):
+class LearnableHypernet(nn.Module):
     def __init__(self, device, batch_size):
-        super(LearnableStory, self).__init__()
+        super(LearnableHypernet, self).__init__()
         self.input_units = 4
         self.output_units = 32
         self.device = device
@@ -28,13 +28,13 @@ class LearnableStory(nn.Module):
         self.temporal = ModulatedMatrix(self.output_units, device, batch_size)
         
         # Learning rates
-        self.infer_lr = 0.1
+        self.infer_lr = 0.05
         self.hyper_lr = 0.001
         self.temporal_lr = 0.005
         
         # Other vars
         self.infer_max_iter = 10
-        self.l2_lambda = 0.001
+        self.l2_lambda = 0.0001
         self.l1_lambda = 0.0
 
     ####################
@@ -50,12 +50,16 @@ class LearnableStory(nn.Module):
         higher_state_list = []
         weights_list = []
         higher_state = None
-        
+    
+
         if eval_mode:
             self.eval_mode = True
         else:
             self.eval_mode = False
         
+        higher_state_list.append(self.batch_init_story().clone().detach().cpu().numpy())
+
+
         for t in range(len(temporal_batch_input)):
         # for state, action, next_state in trajectory:
             
@@ -74,13 +78,18 @@ class LearnableStory(nn.Module):
             # print(errors)
             
             if eval_mode:
-                print("saving higher states")
+                # print("saving higher states")
                 predicted_states_list.append(predicted_states.detach().cpu().numpy())
                 # higher_state_list.append(torch.squeeze(higher_state).detach().cpu().numpy())
                 # weights_list.append(weights.detach().cpu().numpy())
         
-        errors = errors/len(temporal_batch_input)
+        # errors = errors/len(temporal_batch_input)
         
+        # print("######### Predicting the states #########")
+        # print("Shapes : ", predicted_states.shape, temporal_batch_output.shape)
+        # print("Predicted states : ", predicted_states[0])
+        # print("True states : ", temporal_batch_output[-1][0])
+
         if eval_mode:
             return errors.detach().cpu().numpy(), \
                 predicted_states_list, higher_state_list#, weights_list
@@ -110,10 +119,6 @@ class LearnableStory(nn.Module):
             loss = self.batch_errors(batch_output, predicted_states)+\
                 self.l2_lambda * torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)
                 # self.l1_lambda * torch.mean(torch.sum(torch.abs(story), axis=-1), axis=0)
-
-            if self.eval_mode:
-                print("L2 val : ", torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)\
-                    .detach().cpu().numpy(), "\t Loss : ", loss.detach().cpu().numpy())
             
             # Backward - but only update story
             loss.backward()
@@ -121,7 +126,11 @@ class LearnableStory(nn.Module):
             infer_optimizer.zero_grad()
             self.zero_grad()
             # print("backward pass")
-            
+    
+        if self.eval_mode:
+            print("L2 val : ", torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)\
+                .detach().cpu().numpy(), "\t Loss : ", loss.detach().cpu().numpy())
+
         return story.clone().detach()
 
     def batch_errors(self, true, predicted):  
