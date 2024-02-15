@@ -30,8 +30,8 @@ def reset_state(env, start_state=None, goal=None, times=50):
 planner = FlatPlanner(PLANNING_HORIZON)
 env = CompositionGrid(COMPOSITION_CONFIG)
 START_STATE = (2, 0)
-GOALS = [(2, 0), (2, 4), (2, 8), (0, 9), (4, 9), (0, 10), (4, 10)]
-
+# GOALS = [(2, 0), (2, 4), (2, 8), (0, 9), (4, 9), (0, 10), (4, 10)]
+GOALS = [(2, 0), (2, 4), (0, 5), (0, 6), (4, 5), (4, 6)]
 ####### Planner #######
 
 counters = []

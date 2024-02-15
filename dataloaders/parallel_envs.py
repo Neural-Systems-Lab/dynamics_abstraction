@@ -38,6 +38,7 @@ class ParallelEnvironments():
         for c in configs:
             for i in range(len(c["abs_actions"])):
                 for _ in range(self.splits):
+                    print("Creating Environments : ", c["subgoals"][i], c["abs_actions"][i])
                     e = SimpleGridEnvironment(c, c["subgoals"][i], c["abs_actions"][i])
                     self.parallel_envs.append(e)
                     self.higher_actions.append(np.array(c["abs_actions"][i]).flatten())

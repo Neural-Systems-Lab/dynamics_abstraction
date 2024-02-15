@@ -1,4 +1,5 @@
 import io
+import sys
 import random
 
 import numpy as np
@@ -27,6 +28,7 @@ class CompositionGrid():
 
         # Define global variables
         self.board = config["board"]
+        self.block_config = config["block_config"]
         self.rows, self.columns = self.board.shape
         # print(self.rows, self.columns)
         self.state = None
@@ -37,12 +39,21 @@ class CompositionGrid():
         
         # Map each position to a reference framed one hot
         # self.one_hots, self.higher_states = self.map_pos_to_one_hot()
-        self.higher_states, self.subgoal_states = self.map_higher_states()
+        self.higher_states, self.composition_states, self.subgoal_states = self.map_higher_states()
 
-        print(self.higher_states)
-        print(self.subgoal_states)
+        print(self.higher_states, "\n\n")
+        print(self.composition_states, "\n\n")
+        print(self.subgoal_states, "\n\n")
         # print(self.higher_states)
 
+    def construct_composition(self):
+        block_matrix = self.block_config
+    
+    def get_higher_composition(self):
+        if self.state == None:
+            print("Init Error. Please reset the board to use for the first time")
+            return 0
+        return self.composition_states[self.state]
     def wall_finder(self):
 
         for i in range(self.rows):
@@ -76,6 +87,7 @@ class CompositionGrid():
             higher_.append(one_hot)
         
         pos_to_higher = {}
+        pos_to_composition = {}
         subgoals = []
 
         print(self.rows, self.fx, self.columns, self.fy)
@@ -97,7 +109,7 @@ class CompositionGrid():
                             pos_to_higher[(x, y)] = []
                         
                         pos_to_higher[(x, y)].append(one_hot)
-
+                        pos_to_composition[(x, y)] = self.config["block_config"][i][j]
 
                         # Track possible goals for planning
                         if x == 0 or y == 0 or x == self.rows-1 \
@@ -112,16 +124,26 @@ class CompositionGrid():
                 loc not in subgoals and loc not in self.walls:
                     subgoals.append(loc)
 
-        return pos_to_higher, subgoals
+        return pos_to_higher, pos_to_composition, subgoals
 
-    def planning_metric(self, next_state_id):
+    def planning_metric(self, state_id):
         # print(self.higher_states)
-
+        for ids in self.higher_goal:
+            if np.argmax(ids) == state_id:
+                return 0
+            
+        
+        distances = []
         for loc in self.higher_states.keys():
-            if np.argmax(self.higher_states[loc][0]) == next_state_id:
+            if np.argmax(self.higher_states[loc][0]) == state_id:
                 x1, y1 = loc
                 x2, y2 = self.goal
-                return abs(x1-x2) + abs(y1-y2)
+                distances.append(abs(x1-x2) + abs(y1-y2))
+                
+        return sum(distances)/len(distances)
+        # x1, y1 = self.state
+        # x2, y2 = self.goal
+        # return abs(x1-x2) + abs(y1-y2)
     
 
     def get_pomdp_state(self):
@@ -148,6 +170,8 @@ class CompositionGrid():
         
         if goal != None:
             self.goal = goal
+            self.higher_goal = self.higher_states[goal]
+
 
         self.state = start
         # return self.one_hots[self.state]
@@ -161,7 +185,7 @@ class CompositionGrid():
         if record_step:
             self.episode_data.append((self.state, action, next_state, reward))
         self.state = next_state
-        
+        print(self.state)
         # return self.one_hots[self.state].flatten(), reward, end
         return self.get_pomdp_state(), reward, end
         

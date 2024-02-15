@@ -1,5 +1,6 @@
-import torch.nn as nn
 import torch
+import numpy as np
+import torch.nn as nn
 import torch.nn.functional as F
 import sys
 
@@ -7,39 +8,77 @@ import sys
 # Network with learnable Stories
 ###########################################
 
+MODEL_PARAMS = {
+    "input_units": 32,
+    "output_units": 64,
+    "data_in_dims": 13,
+    "data_out_dims": 9,
+    "input_timesteps": 20,
+    "infer_lr": 0.1,
+    "hyper_lr": 0.0005,
+    "temporal_lr": 0.0005,
+    "infer_max_iter": 20,
+    "l2_lambda": 0.0,
+    "var_lambda": 1,
+    "center_lambda": 0.001,
+    "hypernet_layers": [256, 256, 256],
+
+}
+
+INFER_PARAMS = {
+    "input_units": 32,
+    "output_units": 64,
+    "data_in_dims": 13,
+    "data_out_dims": 9,
+    "input_timesteps": 25,
+    "infer_lr": 0.1,
+    "hyper_lr": 0.0005,
+    "temporal_lr": 0.0005,
+    "infer_max_iter": 20,
+    "l2_lambda": 0.0,
+    "var_lambda": 1,
+    "hypernet_layers": [256, 256, 256],
+
+}
+
 class LearnableEmbedding(nn.Module):
-    def __init__(self, device, batch_size, timesteps=25):
+    def __init__(self, device, batch_size, timesteps=25, params=MODEL_PARAMS):
         super(LearnableEmbedding, self).__init__()
-        self.input_units = 4
-        self.output_units = 32
-        self.data_in_dims = 13
-        self.data_out_dims = 9
+        
+        self.input_units = params["input_units"]
+        self.output_units = params["output_units"]
+        self.data_in_dims = params["data_in_dims"]
+        self.data_out_dims = params["data_out_dims"]
         self.input_timesteps = timesteps
         self.device = device
         self.batch_size = batch_size
+
+        # Learning rates
+        self.infer_lr = params["infer_lr"]
+        self.hyper_lr = params["hyper_lr"]
+        self.temporal_lr = params["temporal_lr"]
         
-        # Model params
+        # Other vars
+        self.infer_max_iter = params["infer_max_iter"]
+        self.l2_lambda = params["l2_lambda"]
+        self.var_lambda = params["var_lambda"]
+
+        # Models
+        layers = params["hypernet_layers"]
+        assert len(layers) > 2
+
         self.hypernet = nn.Sequential(
-            nn.Linear(self.input_units, 128),
+            nn.Linear(self.input_units, layers[0]),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(layers[0], layers[1]),
             nn.ReLU(),
-            nn.Linear(128, 64),
+            nn.Linear(layers[1], layers[2]),
             nn.ReLU(),
-            nn.Linear(64, self.output_units)
+            nn.Linear(layers[2], self.output_units)
         )
         self.temporal = LowerRNN(self.output_units, device, \
                         batch_size, self.data_in_dims, self.data_out_dims)
         
-        # Learning rates
-        self.infer_lr = 0.05
-        self.hyper_lr = 0.0005
-        self.temporal_lr = 0.001
-        
-        # Other vars
-        self.infer_max_iter = 10
-        self.l2_lambda = 0.0001
-        self.l1_lambda = 0.0
 
     ####################
     # Batched functions
@@ -60,6 +99,8 @@ class LearnableEmbedding(nn.Module):
         else:
             self.eval_mode = False
         
+        higher_state_list.append(np.squeeze(self.batch_init_story().clone().detach().cpu().numpy()))
+        
         for t in range(len(temporal_batch_input)):
         # for state, action, next_state in trajectory:
             
@@ -69,16 +110,20 @@ class LearnableEmbedding(nn.Module):
             if eval_mode:
                 higher_state_list.append(torch.squeeze(higher_state).detach().cpu().numpy())
         
+        # Find the center of the clusters
+        cluster_centers = self.cluster_centers(higher_state)
+
         # This is the final weights for this batch of samples
         weights = self.hypernet(higher_state)
         # print(higher_state_list)
-        print("Higher states : ", higher_state[0])
+        
+        # print("Higher states : ", higher_state[0])
         temporal_batched_weights = weights.repeat(self.input_timesteps, 1, 1)
         # print("shapes : ", temporal_batch_input.shape, temporal_batch_output.shape, weights.shape)
 
         predicted_states = self.temporal(temporal_batch_input, temporal_batched_weights)
-        print("###### predicted states : ", predicted_states[-1][0])
-        print("###### actual states : ", temporal_batch_output[-1][0])
+        # print("###### predicted states : ", predicted_states[-1][0])
+        # print("###### actual states : ", temporal_batch_output[-1][0])
 
         errors = torch.pow(predicted_states-temporal_batch_output, 2)
         # print(errors.shape)
@@ -91,18 +136,19 @@ class LearnableEmbedding(nn.Module):
                 predicted_states_list, higher_state_list#, weights_list
                 
         # return errors/len(temporal_batch_input)
-        return errors
+        return errors, cluster_centers
     
     def batch_inference(self, batch_input, batch_output, timestep, previous_story=None):
         
         if previous_story == None:
             story = self.batch_init_story()
         else:
-            story = previous_story.clone()
+            story = previous_story.clone().detach()
             story.requires_grad = True
         
         # Is this optimizer definition correct for batched story?
-        infer_optimizer = torch.optim.SGD([story], self.infer_lr*(1/(timestep+1)))
+        # infer_optimizer = torch.optim.SGD([story], self.infer_lr*(1/(timestep+1)))
+        infer_optimizer = torch.optim.SGD([story], self.infer_lr)
         
         hidden = torch.zeros((self.temporal.num_layers, self.batch_size, \
                 self.temporal.hidden_size), device=self.device)
@@ -114,21 +160,27 @@ class LearnableEmbedding(nn.Module):
             predicted_states, hidden = self.temporal.forward_inference(batch_input, weights, hidden)
             # print("Temporal next states : ", predicted_states.shape)
             
-            loss = self.batch_errors(batch_output, predicted_states)+\
-                self.l2_lambda * torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)
+            '''
+            # Loss with negative L2 regularization: Incentivize higher distances
+            '''
+            loss = self.batch_errors(batch_output, predicted_states) - \
+                    self.l2_lambda * torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0) +\
+                    self.var_lambda * torch.sum(torch.var(story, axis=0))
                 # self.l1_lambda * torch.mean(torch.sum(torch.abs(story), axis=-1), axis=0)
-
+            
             loss.backward()
             infer_optimizer.step()
             infer_optimizer.zero_grad()
-            self.zero_grad()
+            # self.zero_grad()
             # print("backward pass done for step : ", i)
         
-        if self.eval_mode:
+        if self.eval_mode and timestep % 10 == 0:
+            print("Story shape and variance : ", story.shape, torch.mean(torch.var(story, axis=0)))
             print("L2 val : ", torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)\
                  .detach().cpu().numpy(), "\t Loss : ", loss.detach().cpu().numpy())
             
-        return story.clone().detach()
+        # return story.clone().detach()
+        return story
 
     def batch_errors(self, true, predicted):  
         err = torch.pow(true-predicted, 2)
@@ -136,6 +188,9 @@ class LearnableEmbedding(nn.Module):
         err = torch.mean(err, axis=0)
         return err
     
+    def cluster_centers(self, higher_states):
+        return torch.mean(higher_states, axis=0)
+
     def batch_init_story(self):
         s = torch.zeros((self.batch_size, self.input_units), requires_grad=True, device=self.device)
         return s
@@ -172,6 +227,7 @@ class LowerRNN(nn.Module):
         out, _ = self.rnn(inp)
         # output = F.relu(self.decoder2(F.relu(self.decoder1(out))))
         output = F.relu(self.decoder(out))
+        # output = self.decoder(out)
         # print("final output : ", output.shape)    
         return output    
 
@@ -183,5 +239,22 @@ class LowerRNN(nn.Module):
         # print("post rnn : ", out.shape, h.shape)
         # output = torch.squeeze(F.relu(self.decoder2(F.relu(self.decoder1(out)))))
         output = torch.squeeze(F.relu(self.decoder(out)))
+        # output = torch.squeeze(self.decoder(out))
         # print("final : ", output.shape)
         return output, h
+
+MODEL_PARAMS_OLD = {
+    "input_units": 4,
+    "output_units": 32,
+    "data_in_dims": 13,
+    "data_out_dims": 9,
+    "input_timesteps": 25,
+    "infer_lr": 0.1,
+    "hyper_lr": 0.0005,
+    "temporal_lr": 0.0005,
+    "infer_max_iter": 20,
+    "l2_lambda": 0.00001,
+
+    "hypernet_layers": [128, 64, 64],
+
+}

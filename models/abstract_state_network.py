@@ -36,15 +36,20 @@ class AbstractStateNetwork(nn.Module):
 
 
 class AbstractStateDataGenerator():
-    def __init__(self, config, base_configs, lower_state_model, lower_action_model, device):
+    def __init__(self, config, base_configs, lower_state_model, \
+                lower_action_model, timesteps, batch, device):
         self.config = config
         self.state_model = lower_state_model
         self.action_model = lower_action_model
         self.device = device
         self.centers = np.array(config["centers"])
         self.num_bases = len(self.centers)
-        
         self.base_configs = base_configs
+        self.timesteps = timesteps
+        self.state_batch = batch
+
+        self.error_counter = 0
+        self.state_error_counter = 0
         
     def reset_state(self, env, start_state=None, goal=None, times=50):
         env.reset(start=start_state, goal=goal)
@@ -74,7 +79,8 @@ class AbstractStateDataGenerator():
                 continue
             abstract_action, subgoal = self.get_abstract_action(higher_index)
             next_state, higher_index = self.step(abstract_action, subgoal, env)
-            
+            if next_state == None:
+                continue
             print(current_state, abstract_action, next_state)
             # sys.exit(0)
             x_train.append(torch.cat((current_state, abstract_action), dim=0))
@@ -102,12 +108,22 @@ class AbstractStateDataGenerator():
         print("Running policy for subgoal : ", higher_action_idx, base_config["subgoals"][higher_action_idx])
         
         return abstract_action, relative_action
+    
+    # def get_abstract_state_2(self, env):
+    #     # Directly get abstract state from the current lower state
+    #     print("State : ", env.state)
+    #     center_index = env.get_higher_composition()
+    #     higher_state = self.centers[center_index-1]
+    #     unique_token = env.get_higher_token()
+    #     higher_state = np.concatenate((higher_state, unique_token[0]), axis=0)
+    #     print("Composition : ", center_index - 1)
+    #     return torch.from_numpy(higher_state).to(self.device, dtype=torch.float32), center_index-1
 
     def get_abstract_state(self, env):
         print("################## BEGIN ABS STATE ##################")
         # Infer abstract state from the lower state network
         # Return abstract state + unique_token
-        action_sequence = [0] # Walking in circles
+        action_sequence = np.random.choice(4, self.timesteps) # Walking in circles
         inference_data_x = []
         inference_data_y = []
         # print(self.env.get_pomdp_state())
@@ -127,18 +143,31 @@ class AbstractStateDataGenerator():
 
         inference_data_x = torch.unsqueeze(inference_data_x.to(self.device, dtype=torch.float32), axis=1)
         inference_data_y = torch.unsqueeze(inference_data_y.to(self.device, dtype=torch.float32), axis=1)
+        
+        # Batch the data because it just works 
+        inference_data_x = inference_data_x.repeat(1, self.state_batch, 1)
+        inference_data_y = inference_data_y.repeat(1, self.state_batch, 1)
 
         print(inference_data_x.shape, inference_data_y.shape)
+        # sys.exit(0)
 
         # Use this data to infer the abstract stat
         # with torch.no_grad():
         loss, _, higher = self.state_model(inference_data_x, inference_data_y, eval_mode=True)
-        
+        higher_ = np.mean(higher[-1], axis=0)
+        print(higher_.shape, self.centers.shape)
         # Min of distances
-        center_index = np.argmin(np.linalg.norm(np.expand_dims(higher[-1], axis=0) - self.centers, axis=1))
+        center_index = np.argmin(np.linalg.norm(np.expand_dims(higher_, axis=0) - self.centers, axis=1))
+        
+        if center_index != env.composition_states[record_init_state]:
+            self.state_error_counter += 1
+            print("Something is wrong ... discarding this data.")
+            env.state = record_init_state
+            return None, None
+
         higher_state = self.centers[center_index]
         print("Center index : ", center_index)
-        print("Concatenated distances : ", np.linalg.norm(np.expand_dims(higher[-1], axis=0) - self.centers, axis=1))
+        print("Concatenated distances : ", np.linalg.norm(np.expand_dims(higher_, axis=0) - self.centers, axis=1))
 
         # Go back to original state
         env.state = record_init_state
@@ -147,9 +176,11 @@ class AbstractStateDataGenerator():
         # Concat with token of the state
         unique_token = env.get_higher_token()
         if len(unique_token) > 1:
+            self.error_counter += 1
             print("Something is wrong")
+            env.state = record_init_state
             return None, None
-
+        # sys.exit(0)
         # print("Unique token : ", unique_token)
         higher_state = np.concatenate((higher_state, unique_token[0]), axis=0)
         print("higher state : ", higher_state)

@@ -30,29 +30,11 @@ SAVE_PATH = "../saved_models/state_network/jan30_run_2_hypernet.state"
 # Training a Hypernet Modulated Network
 #########################################
 
-# Transforming data
+# Get the data
 
-# data1, data2, data3, data4 = get_transitions()
-data1, data2 = get_transitions()
-
-x1, y1 = batch_data(data1, BATCH_SIZE)
-x2, y2 = batch_data(data2, BATCH_SIZE)
-# x3, y3 = batch_data(data3, BATCH_SIZE)
-# x4, y4 = batch_data(data4, BATCH_SIZE)
-
-print(x2.shape, y1.shape)
-
-x1 = torch.from_numpy(x1).to(device, dtype=torch.float32)
-x2 = torch.from_numpy(x2).to(device, dtype=torch.float32)
-# x3 = torch.from_numpy(x3).to(device, dtype=torch.float32)
-# x4 = torch.from_numpy(x4).to(device, dtype=torch.float32)
-
-
-y1 = torch.from_numpy(y1).to(device, dtype=torch.float32)
-y2 = torch.from_numpy(y2).to(device, dtype=torch.float32)
-# y3 = torch.from_numpy(y3).to(device, dtype=torch.float32)
-# y4 = torch.from_numpy(y4).to(device, dtype=torch.float32)
-
+data1, data2 = generate_data(BATCH_SIZE, device)
+train_x1, train_y1, test_x1, test_y1 = data1
+train_x2, train_y2, test_x2, test_y2 = data2
 
 #######################
 # MODEL LOAD and TRAIN
@@ -77,14 +59,14 @@ for epochs in range(HYPER_EPOCHS):
     epoch_loss = []
     print("Epoch : ", epochs)
     
-    for i in range(len(x1)):
+    for i in range(len(train_x1)):
         
         # Ignore predicted and inferred states during training
         hyper_optim.zero_grad()
         temporal_optim.zero_grad()
         
-        l1 = model(x1[i], y1[i]) 
-        l2 = model(x2[i], y2[i])
+        l1, cluster_centers1 = model(train_x1[i], train_y1[i]) 
+        l2, cluster_centers2 = model(train_x2[i], train_y2[i])
         # l3 = model(x3[i], y3[i])
         # l4 = model(x4[i], y4[i])
         

@@ -1,6 +1,9 @@
-import numpy as np
-import random
+
 import sys
+import random
+import numpy as np
+import torch
+
 from environments.pomdp_config import *
 from environments.env import SimpleGridEnvironment
 
@@ -18,22 +21,24 @@ ACTIONS = {0:[0, 0, 0, 1],
            3:[1, 0, 0, 0]
            }
 
-TRAJECTORIES = 1000
-STEPS = 25
+TRAIN = 600
+TEST = 200
+TRAJECTORIES = TRAIN + TEST
+STEPS = 20
 
-configs = [c1, c2]
+configs = [c3, c4, c1, c2, c5]
 
-print(configs)
-def get_transitions():
+# print(configs)
+def get_transitions(num_envs, timesteps):
     datasets = []
-    for config in configs:
+    for config in configs[:num_envs]:
         env = SimpleGridEnvironment(config=config, goal=(2, 0))
         env.plot_board()
         dataset = []
         cur_state = env.reset()
         for _ in range(TRAJECTORIES):
             trajectory = []
-            for s in range(STEPS):
+            for s in range(timesteps):
                 action = random.randint(0, 3)
                 next_state, reward, end = env.step(action)
                 # pomdp_state = env.get_pomdp_state()
@@ -49,7 +54,7 @@ def get_transitions():
     return datasets
 
 
-def batch_data(dataset, batch_size):
+def batch_data(dataset, batch_size, timesteps):
     print("here : ", len(dataset), len(dataset[0]))
     '''
     len(dataset) % Batch == 0
@@ -65,7 +70,7 @@ def batch_data(dataset, batch_size):
         inputs = []
         outputs = []
 
-        for time in range(STEPS):
+        for time in range(timesteps):
         
             input_t = []
             output_t = []
@@ -90,3 +95,26 @@ def batch_data(dataset, batch_size):
     batch_output = np.array(batch_output)
     
     return batch_input, batch_output
+
+
+def generate_data(batch_size, device, num_envs=2, timesteps=STEPS):
+
+    data = get_transitions(num_envs, timesteps)
+    train_test_env_splits = []
+
+    # For each environment batch and split the data into train and test
+    for d in data:
+        train, test = d[:TRAIN], d[TRAIN:]
+        x_train, y_train = batch_data(train, batch_size, timesteps)
+        x_test, y_test = batch_data(test, batch_size, timesteps)
+        
+        x_train = torch.from_numpy(x_train).to(device, dtype=torch.float32)
+        y_train = torch.from_numpy(y_train).to(device, dtype=torch.float32)
+        x_test = torch.from_numpy(x_test).to(device, dtype=torch.float32)
+        y_test = torch.from_numpy(y_test).to(device, dtype=torch.float32)
+
+        train_test_env_splits.append((x_train, y_train, x_test, y_test))
+
+    assert len(train_test_env_splits) == num_envs
+
+    return train_test_env_splits

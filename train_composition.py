@@ -14,27 +14,26 @@ from environments.pomdp_config import *
 from models.abstract_state_network import AbstractStateNetwork, AbstractStateDataGenerator
 
 
-
-
 ###################
 # CONSTANTS
 ###################
 
 device = torch.device("cuda")
 # Data Generation Constants
-COMPOSITION_CONFIG = composite_config1
+COMPOSITION_CONFIG = composite_config2
 BASE_CONFIGS = [c1, c2]
-NUM_SAMPLES = 100
+NUM_SAMPLES = 1000
 
 
 HYPER_EPOCHS = 50
+BATCH_SIZE_STATE = 100
 BATCH_SIZE = 1
 POLICY_TIMESTEPS = 20
-INFERENCE_TIMESTEPS = 1
-LOWER_STATE_MODEL_PATH = "../saved_models/state_network/jan_24_run_3_embedding.state"
-LOWER_ACTION_MODEL_PATH = "../saved_models/action_network/jan_23_run_1_action_embedding.state"
-HIGHER_STATE_MODEL_PATH = "../saved_models/state_network/jan_24_run_1_higher_state_"+COMPOSITION_CONFIG["name"]+".state"
-
+INFERENCE_TIMESTEPS = 20
+LOWER_STATE_MODEL_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_9_run_1_embedding.state"
+LOWER_ACTION_MODEL_PATH = "../saved_models/action_network/feb_11_run_2_action_embedding.state"
+HIGHER_STATE_MODEL_PATH = "../saved_models/higher_state_network/feb_12_run_1_higher_state_"+COMPOSITION_CONFIG["name"]+".state"
+COMPOSITION_DATA_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/composition_data/"
 
 # Define env
 env = CompositionGrid(COMPOSITION_CONFIG)
@@ -43,7 +42,7 @@ env.plot_board(name="composition2")
 
 
 # Define lower state model
-lower_state_model = LearnableEmbedding(device, BATCH_SIZE, timesteps=INFERENCE_TIMESTEPS).to(device)
+lower_state_model = LearnableEmbedding(device, BATCH_SIZE_STATE, timesteps=INFERENCE_TIMESTEPS).to(device)
 try:
     lower_state_model.load_state_dict(torch.load(LOWER_STATE_MODEL_PATH))
     print("################## LOAD SUCCESS #################")
@@ -59,19 +58,33 @@ except:
 
 # Define higher state model
 higher_state_model = AbstractStateNetwork(4, 16, COMPOSITION_CONFIG["num_blocks"]).to(device)
-try:
-    higher_state_model.load_state_dict(torch.load(HIGHER_STATE_MODEL_PATH))
-except:
-    print("COULD NOT LOAD HIGHER STATE NETWORK")
+# try:
+#     higher_state_model.load_state_dict(torch.load(HIGHER_STATE_MODEL_PATH))
+# except:
+#     print("COULD NOT LOAD HIGHER STATE NETWORK")
 
 
 
 # Define data generator
 # lower_state_model.eval()
 lower_action_model.eval()
-data_gen = AbstractStateDataGenerator(COMPOSITION_CONFIG, BASE_CONFIGS, lower_state_model, lower_action_model, device)
+data_gen = AbstractStateDataGenerator(COMPOSITION_CONFIG, BASE_CONFIGS, \
+            lower_state_model, lower_action_model, INFERENCE_TIMESTEPS, BATCH_SIZE_STATE, device)
 x_train, y_train = data_gen.generate_data(NUM_SAMPLES, env)
 
+print("################## DATA GENERATED #################")
+print("################## Printing errors #################")
+print(data_gen.error_counter)
+print(data_gen.state_error_counter)
+print(x_train.shape, y_train.shape)
+
+
+###################
+# SAVE THE DATA
+###################
+
+torch.save(x_train, os.path.join(COMPOSITION_DATA_PATH, "x_train_"+COMPOSITION_CONFIG["name"]+".pt"))
+torch.save(y_train, os.path.join(COMPOSITION_DATA_PATH, "y_train_"+COMPOSITION_CONFIG["name"]+".pt"))
 
 # Define the optimizer
 optimizer = optim.Adam(higher_state_model.parameters(), lr=0.0001)

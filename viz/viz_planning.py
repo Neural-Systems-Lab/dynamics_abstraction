@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 x, y = (2, 0)
 points = [(2, 0), (2, 4), (2, 8), (0, 9), (4, 9), (0, 10), (4, 10)]
 
-apc_plan = [1, 1, 2, 10, 10, 10, 10]
+apc_plan = [1, 1, 2, 3, 3, 3, 3]
 flat_plan = [1, 4, 8, 11, 11, 12, 12]
 
 distances = [np.abs(x-i)+np.abs(y-j) for i, j in points]

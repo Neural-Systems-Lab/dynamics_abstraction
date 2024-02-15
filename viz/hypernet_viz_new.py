@@ -63,7 +63,7 @@ try:
 except:
     print("################## NOPE #######################")
 
-print("################## MODEL PARAMS #######################")
+print("################## FREEZING MODEL PARAMS #######################")
 for param in model.parameters():
     print(param.shape)
     param.requires_grad = False

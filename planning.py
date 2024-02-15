@@ -27,13 +27,14 @@ COMPOSITION_CONFIG = composite_config2
 BASE_CONFIGS = [c1, c2]
 HYPER_EPOCHS = 50
 BATCH_SIZE = 1
-INFERENCE_TIMESTEPS = 1
+BATCH_SIZE_STATE = 100
+INFERENCE_TIMESTEPS = 10
 MAX_TIMESTEPS = 10
 PLANNING_HORIZON = 1
 
-LOWER_STATE_MODEL_PATH = "../saved_models/state_network/jan_24_run_3_embedding.state"
-LOWER_ACTION_MODEL_PATH = "../saved_models/action_network/jan_23_run_1_action_embedding.state"
-HIGHER_STATE_MODEL_PATH = "../saved_models/state_network/jan_24_run_1_higher_state_"+COMPOSITION_CONFIG["name"]+".state"
+LOWER_STATE_MODEL_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_9_run_1_embedding.state"
+LOWER_ACTION_MODEL_PATH = "../saved_models/action_network/feb_11_run_2_action_embedding.state"
+HIGHER_STATE_MODEL_PATH = "../saved_models/higher_state_network/feb_12_run_1_higher_state_"+COMPOSITION_CONFIG["name"]+".state"
 
 '''
 MPC planning:
@@ -48,7 +49,7 @@ MPC planning:
 
 
 #############################################
-lower_state_model = LearnableEmbedding(device, BATCH_SIZE, timesteps=INFERENCE_TIMESTEPS).to(device)
+lower_state_model = LearnableEmbedding(device, BATCH_SIZE_STATE, timesteps=INFERENCE_TIMESTEPS).to(device)
 try:
     lower_state_model.load_state_dict(torch.load(LOWER_STATE_MODEL_PATH))
     print("###### STATE NETWORK LOADED SUCCESSFULLY ######")
@@ -67,8 +68,8 @@ except:
 
 #############################################
 higher_state_model = AbstractStateNetwork(4, 16, COMPOSITION_CONFIG["num_blocks"]).to(device)
-higher_state_util = AbstractStateDataGenerator(COMPOSITION_CONFIG, BASE_CONFIGS, \
-                                                    lower_state_model, action_model, device)
+higher_state_util = AbstractStateDataGenerator(COMPOSITION_CONFIG, BASE_CONFIGS, lower_state_model, \
+                                             action_model, INFERENCE_TIMESTEPS, BATCH_SIZE_STATE, device)
 try:
     higher_state_model.load_state_dict(torch.load(HIGHER_STATE_MODEL_PATH))
     print("###### HIGHER STATE NETWORK LOADED SUCCESSFULLY ######")
@@ -86,10 +87,11 @@ planner = AbstractPlanner(COMPOSITION_CONFIG, BASE_CONFIGS, higher_state_model, 
                         PLANNING_HORIZON, device)
 
 # Define environment
-env = CompositionGrid(composite_config2)
+env = CompositionGrid(COMPOSITION_CONFIG)
 # env.plot_board()
 START_STATE = (2, 0)
 GOALS = [(2, 0), (2, 4), (2, 8), (0, 9), (4, 9), (0, 10), (4, 10)]
+# GOALS = [(2, 0), (2, 4), (0, 5), (0, 6), (4, 5), (4, 6)]
 
 # for state in env.valid_pos:
 #     if len(env.higher_states[state]) > 1:

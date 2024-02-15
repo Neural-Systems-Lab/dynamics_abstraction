@@ -143,7 +143,7 @@ class LowerPolicyTrainer(nn.Module):
         return discounted_returns
     
     # @torch.no_grad
-    def execute_policy(self, env, higher_actions):
+    def execute_policy(self, env, higher_actions, record_step=True):
         '''
         Inference of optimal actions from learnt policy
         '''
@@ -157,14 +157,14 @@ class LowerPolicyTrainer(nn.Module):
         # print("State action shape : ", state.shape, higher_actions.shape)
         top_down_weights = self.hypernet(higher_actions)
         top_down_weights = torch.unsqueeze(top_down_weights, dim=0)
-        print("Top down weights : ", top_down_weights.shape)
+        # print("Top down weights : ", top_down_weights.shape)
         self.policy.init_hidden()
         for i in range(self.max_timesteps):
             
             # Here both state and weights are expected to have a batch dimension
             action_logits = self.policy(state, top_down_weights)
             action = torch.argmax(action_logits)
-            next_state, reward, end = env.step(action.detach().cpu().numpy())
+            next_state, reward, end = env.step(action.detach().cpu().numpy(), record_step)
             state = torch.tensor(next_state).to(self.device, dtype=torch.float32)
             state = torch.unsqueeze(state, dim=0)
             states_list.append(env.get_state())

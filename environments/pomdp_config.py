@@ -65,9 +65,9 @@ c2 = {
     "rows": 5,
     "cols": 5,
     "walls": [  (0, 0),                 (0, 3), (0, 4),
-                (1, 0),                 (1, 3), (1, 4),
+                                        (1, 3), (1, 4),
                                         (2, 3), (2, 4),
-                (3, 0),                 (3, 3), (3, 4),
+                                        (3, 3), (3, 4),
                 (4, 0),                 (4, 3), (4, 4)
     ],
     "subgoals":[(2, 0), (4, 2), (0, 2), (0, 1), (4, 1)],
@@ -195,20 +195,55 @@ c4 = {
     ]
 }
 
+c5 = {
+    "id":5,
+    "name": "Base5 Config 5",
+    "rows": 5,
+    "cols": 5,
+    "walls": [                
+                (1, 0),              
+                (2, 0),(2, 1),             
+                (3, 0),(3, 1),(3, 2),
+                (4, 0),(4, 1),(4, 2),(4, 3)
+    ],
+    "subgoals":[(2, 0), (4, 2), (0, 2)],
+    "abs_actions":[
+        [
+            [0, 1, 0, 0],
+            [0, 0, 0, 1],
+            [1, 0, 0, 0],
+            [0, 0, 1, 0]
+        ],
+        [
+            [1, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
+            [1, 0, 0, 0]
+        ]
+    ],
+    "teleports":[
+        [2],
+        [1],
+        [0]
+
+    ]
+}
+
 
 composite_config1 = {
     "id":1,
     "name":"composition1",
     "num_blocks":2,
     "block_size":(5, 5),
-    "centers": [[ 0.11162517,  0.10597038, -0.04626806,  0.1036149 ],
-                [-0.101905,   -0.08235317,  0.02417811, -0.08022156]],
+    "centers": [[-0.03103941, -0.06061576,  0.03724057,  0.05038054],
+                [ 0.02222287,  0.05780229, -0.03415328, -0.04503525]],
     "board":np.array([
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
-    [GOAL_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
+    [EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL]]),
+    "block_config":[[0, 1]]
 
 }
 
@@ -217,12 +252,13 @@ composite_config2 = {
     "name":"composition2",
     "num_blocks":3,
     "block_size":(5, 5),
-    "centers": [[ 0.11162517,  0.10597038, -0.04626806,  0.1036149 ],
-                [-0.101905,   -0.08235317,  0.02417811, -0.08022156]],
+    "centers": [[-0.03103941, -0.06061576,  0.03724057,  0.05038054],
+                [ 0.02222287,  0.05780229, -0.03415328, -0.04503525]],
     "board":np.array([
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [EMPTY_PIXEL, EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL,EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
     [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL],
-    [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL]])
+    [WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, WALL_PIXEL, EMPTY_PIXEL, EMPTY_PIXEL, WALL_PIXEL, WALL_PIXEL]]),
+    "block_config":[[0, 0, 1]]
 }
