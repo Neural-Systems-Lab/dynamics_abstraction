@@ -29,11 +29,11 @@ from environments.pomdp_config import *
 device = torch.device("cuda")
 BATCH_SIZE = 200
 SAMPLES = 1000
-NUM_ENVS = 5
-TIMESTEPS = 15
+NUM_ENVS = 3
+TIMESTEPS = 10
 PLOT_SAVE_PATH = "/gscratch/rao/vsathish/quals/plots/state_network/"
-MODEL_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_13_run_4_embedding.state"
-# PARAMS_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_13_run_3_embedding.params"
+MODEL_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_20_run_2_embedding.state"
+PARAMS_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_20_run_2_embedding.json"
 
 ####################
 # Load Model
@@ -41,6 +41,7 @@ MODEL_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_
 
 try:
     model_params = json.load(open(PARAMS_PATH, "r"))
+    # model_params = torch.load(PARAMS_PATH)
     print("################## PARAMS LOADED #################")
     print(model_params)
     model = LearnableEmbedding(device, BATCH_SIZE, TIMESTEPS, model_params).to(device)
@@ -67,44 +68,44 @@ for param in model.parameters():
 # Load Data
 #####################
 
-data1, data2, data3, data4, data5 = generate_data(BATCH_SIZE, device, num_envs=NUM_ENVS, timesteps=TIMESTEPS)
+data1, data2, data3 = generate_data(BATCH_SIZE, device, num_envs=NUM_ENVS, timesteps=TIMESTEPS)
 train_x1, train_y1, test_x1, test_y1 = data1
 train_x2, train_y2, test_x2, test_y2 = data2
 train_x3, train_y3, test_x3, test_y3 = data3
-train_x4, train_y4, test_x4, test_y4 = data4
-train_x5, train_y5, test_x5, test_y5 = data5
+# train_x4, train_y4, test_x4, test_y4 = data4
+# train_x5, train_y5, test_x5, test_y5 = data5
 
 
 print(train_x1[0].shape, train_y1[0].shape)
 l1, _, higher1 = model(train_x1[0], train_y1[0], eval_mode=True) 
 l2, _, higher2 = model(train_x2[0], train_y2[0], eval_mode=True) 
 l3, _, higher3 = model(train_x3[0], train_y3[0], eval_mode=True) 
-l4, _, higher4 = model(train_x4[0], train_y4[0], eval_mode=True) 
-l5, _, higher5 = model(train_x5[0], train_y5[0], eval_mode=True) 
+# l4, _, higher4 = model(train_x4[0], train_y4[0], eval_mode=True) 
+# l5, _, higher5 = model(train_x5[0], train_y5[0], eval_mode=True) 
 
-print(l1, l2, l3, l4, l5)
+print(l1, l2, l3)
 
 higher1 = np.array(higher1)
 higher2 = np.array(higher2)
 higher3 = np.array(higher3)
-higher4 = np.array(higher4)
-higher5 = np.array(higher5)
+# higher4 = np.array(higher4)
+# higher5 = np.array(higher5)
 
 
 # %%
 t1 = higher1[-1, :, :]
 t2 = higher2[-1, :, :]
 t3 = higher3[-1, :, :]
-t4 = higher4[-1, :, :]
-t5 = higher5[-1, :, :]
+# t4 = higher4[-1, :, :]
+# t5 = higher5[-1, :, :]
 
-print(t1.shape, t2.shape, t3.shape, t4.shape, t5.shape)
+# print(t1.shape, t2.shape, t3.shape, t4.shape, t5.shape)
 
 m1 = np.mean(t1, axis=0)
 m2 = np.mean(t2, axis=0)
 m3 = np.mean(t3, axis=0)
-m4 = np.mean(t4, axis=0)
-m5 = np.mean(t5, axis=0)
+# m4 = np.mean(t4, axis=0)
+# m5 = np.mean(t5, axis=0)
 
 print(m1, m2, m3)
 print(np.square(m1-m2).sum())
@@ -117,15 +118,16 @@ print(np.square(m1-m2).sum())
 t1 = higher1[:, 0, :]
 t2 = higher2[:, 0, :]
 t3 = higher3[:, 0, :]
-t4 = higher4[:, 0, :]
-t5 = higher5[:, 0, :]
+# t4 = higher4[:, 0, :]
+# t5 = higher5[:, 0, :]
 
 print(t1.shape, t2.shape, t3.shape)
-print("First embeddings: ", t1[0], t2[0], t3[0])
+print("First embeddings: ", t1[0], t2[0], t3[0], t4[0], t5[0])
 
 episodes = np.concatenate([t1, t2, t3, t4, t5], axis=0)
 # episodes = np.concatenate([t1, t2, t3, t4], axis=0)
-e_tsne = TSNE(n_components=2, init='pca', perplexity=20)
+# e_tsne = TSNE(n_components=2, init='pca', perplexity=30)
+e_tsne = PCA(n_components=2)
 e_embed = e_tsne.fit_transform(episodes)
 
 print("########## CHECKING COMBINED TSNE SHAPE ##########")
@@ -229,7 +231,7 @@ h_concat = np.concatenate([higher1[-1], higher2[-1], \
 print("######### EMBEDDINGS #########")
 print(h_concat.shape, type(h_concat))
 
-tsne_ = TSNE(n_components=2, init='pca', perplexity=50)
+tsne_ = TSNE(n_components=2, init='pca', perplexity=20)
 h_embed = tsne_.fit_transform(h_concat)
 print(h_embed.shape)
 # h_center1 = np.mean()

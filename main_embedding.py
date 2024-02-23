@@ -10,8 +10,9 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from dataloaders.dataloader_pomdp import generate_data, configs
-from dataloaders.dataloader_pomdp import TRAIN, TEST, STEPS
+from dataloaders.dataloader_pomdp import TRAIN, TEST
 from models.embedding_model import LearnableEmbedding, MODEL_PARAMS
+
 
 ###################
 # CONSTANTS
@@ -19,17 +20,27 @@ from models.embedding_model import LearnableEmbedding, MODEL_PARAMS
 
 device = torch.device("cuda")
 # device = torch.device("cpu")
-HYPER_EPOCHS = 40
+HYPER_EPOCHS = 100
 BATCH_SIZE = 100
-TIMESTEPS = 10
+TIMESTEPS = 15
 NUM_ENVS = 5
 TRAIN_BATCHES = TRAIN // BATCH_SIZE
 TEST_BATCHES = TEST // BATCH_SIZE
 
+'''
+Change filenames during each run
+'''
+date_ = "feb22"
+run_ = 1
+S_dims = 32
 
-LOAD_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_13_run_4_embedding.state"
-SAVE_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_13_run_4_embedding.state"
-PARAMS_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_13_run_4_embedding.params"
+ROOT = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/"
+MODEL_PATH = ROOT+date_+"_run_"+str(run_)+"_dims_"+str(S_dims)+"_envs_"+str(NUM_ENVS)+"_embedding.state"
+PARAMS_PATH = ROOT+date_+"_run_"+str(run_)+"_dims_"+str(S_dims)+"_envs_"+str(NUM_ENVS)+"_embedding.json"
+
+print(MODEL_PARAMS)
+print(MODEL_PATH)
+print(PARAMS_PATH)
 #########################################
 # Training a Hypernet Modulated Network
 #########################################
@@ -37,6 +48,8 @@ PARAMS_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb
 # Get the data
 
 # data1, data2 = generate_data(BATCH_SIZE, device)
+# data1, data2, data3, data4, data5 = generate_data(BATCH_SIZE, device, \
+#                                     num_envs=NUM_ENVS, timesteps=TIMESTEPS)
 data1, data2, data3, data4, data5 = generate_data(BATCH_SIZE, device, \
                                     num_envs=NUM_ENVS, timesteps=TIMESTEPS)
 train_x1, train_y1, test_x1, test_y1 = data1
@@ -57,11 +70,11 @@ try:
 
 except:
     print("################## USING DEFAULT PARAMS #################")
-    json.dump(MODEL_PARAMS, open(PARAMS_PATH, "w"))
-    model = LearnableEmbedding(device, BATCH_SIZE, TIMESTEPS, MODEL_PARAMS).to(device)
+    model_params = MODEL_PARAMS
+    model = LearnableEmbedding(device, BATCH_SIZE, TIMESTEPS, model_params).to(device)
 
 try:
-    model.load_state_dict(torch.load(LOAD_PATH))
+    model.load_state_dict(torch.load(MODEL_PATH))
     print("################## LOAD SUCCESS #################")
 
 except:
@@ -96,18 +109,19 @@ for epochs in range(HYPER_EPOCHS):
         l3, centers3 = model(train_x3[i], train_y3[i])
         l4, centers4 = model(train_x4[i], train_y4[i])
         l5, centers5 = model(train_x5[i], train_y5[i])
-        # l4, centers4 = model(train_x4[i], train_y4[i])
-        center_magnitudes = sum([torch.norm(c) for c in [centers1, centers2, centers3, centers4, centers5]])
+
+        center_magnitudes = sum([torch.norm(c) for c in [centers1, centers2, centers3]])
         # loss = l1+l2+l3+l4
-        loss = l1+l2+l3+l4+l5 - center_magnitudes
+        loss = l1+l2+l3+l4+l5 #- center_magnitudes
         loss.backward()
         hyper_optim.step()
         temporal_optim.step()
-        
+        hyper_optim.zero_grad()
+        temporal_optim.zero_grad()
+
         print("i = ", i, "loss = ", loss.detach().cpu().numpy(), \
               " center_magnitudes = ", center_magnitudes.detach().cpu().numpy())
-
-        # centers = [centers1, centers2, centers3, centers4] 
+        
         centers = [x.detach().cpu().numpy() for x in [centers1, centers2, centers3, centers4, centers5]]
         train_loss_.append(loss.detach().cpu().numpy())
         centers_dist_arr = []
@@ -130,25 +144,28 @@ for epochs in range(HYPER_EPOCHS):
         test_loss_.append(loss)
 
 
-    print("Mean Train Loss (Per Step): ", np.mean(train_loss_)/(NUM_ENVS*STEPS))
-    train_loss.append(np.mean(train_loss_)/(NUM_ENVS*STEPS))
-    print("Mean Test Loss (Per Step): ", np.mean(test_loss_)/(NUM_ENVS*STEPS))
-    test_loss.append(np.mean(test_loss_)/(NUM_ENVS*STEPS))
+    print("Mean Train Loss (Per Step): ", np.mean(train_loss_)/(NUM_ENVS*TIMESTEPS))
+    train_loss.append(np.mean(train_loss_)/(NUM_ENVS*TIMESTEPS))
+    print("Mean Test Loss (Per Step): ", np.mean(test_loss_)/(NUM_ENVS*TIMESTEPS))
+    test_loss.append(np.mean(test_loss_)/(NUM_ENVS*TIMESTEPS))
     print("Mean Center Distance: ", np.mean(center_distances_))
-    center_distances.append(np.mean(center_distances_)*10)
+    center_distances.append(np.mean(center_distances_))
 
-    if epochs % 10 == 0 and epochs != 0:
+    if (epochs+1) % 10 == 0 and epochs != 0:
         print("Saving Checkpoint ... ")
-        torch.save(model.state_dict(), SAVE_PATH)
+
+        torch.save(model.state_dict(), MODEL_PATH)
+        json.dump(model_params, open(PARAMS_PATH, "w"))
+
         plt.clf()
         plt.close()
         plt.plot(train_loss, label="Train Loss")
         plt.plot(test_loss, label="Test Loss")
-        plt.plot(center_distances, label="10 * Center Distances")
+        plt.plot(center_distances, label="Center Distances")
         plt.legend()
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
         plt.title("Embedding State Model Loss")
-        plt.savefig("../plots/loss/embedding_loss.png")
+        plt.savefig("../plots/loss/embedding_loss"+date_+"_dims_"+str(S_dims)+".png")
         
-torch.save(model.state_dict(), SAVE_PATH)
+torch.save(model.state_dict(), MODEL_PATH)

@@ -24,10 +24,10 @@ ACTIONS = {0:[0, 0, 0, 1],
 TRAIN = 600
 TEST = 200
 TRAJECTORIES = TRAIN + TEST
-STEPS = 20
+DEFAULT_STEPS = 25
 
-configs = [c3, c4, c1, c2, c5]
-
+configs = [c1, c2, c3, c4, c5]
+# configs = [c1, c3, c4]
 # print(configs)
 def get_transitions(num_envs, timesteps):
     datasets = []
@@ -55,7 +55,7 @@ def get_transitions(num_envs, timesteps):
 
 
 def batch_data(dataset, batch_size, timesteps):
-    print("here : ", len(dataset), len(dataset[0]))
+    print("here (Num Episodes, Num Steps): ", len(dataset), len(dataset[0]))
     '''
     len(dataset) % Batch == 0
     Input = n * (Batch, timesteps, in_dims)
@@ -97,7 +97,7 @@ def batch_data(dataset, batch_size, timesteps):
     return batch_input, batch_output
 
 
-def generate_data(batch_size, device, num_envs=2, timesteps=STEPS):
+def generate_data(batch_size, device, num_envs=2, timesteps=DEFAULT_STEPS):
 
     data = get_transitions(num_envs, timesteps)
     train_test_env_splits = []

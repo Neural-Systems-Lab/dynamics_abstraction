@@ -20,8 +20,8 @@ from models.abstract_state_network import AbstractStateNetwork, AbstractStateDat
 
 device = torch.device("cuda")
 # Data Generation Constants
-COMPOSITION_CONFIG = composite_config2
-BASE_CONFIGS = [c1, c2]
+COMPOSITION_CONFIG = composite_config3
+BASE_CONFIGS = [c1, c3, c4]
 NUM_SAMPLES = 1000
 
 
@@ -37,10 +37,10 @@ COMPOSITION_DATA_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/composi
 
 # Define env
 env = CompositionGrid(COMPOSITION_CONFIG)
-env.plot_board(name="composition2")
+env.plot_board(name="composition3")
 
 
-
+sys.exit(0)
 # Define lower state model
 lower_state_model = LearnableEmbedding(device, BATCH_SIZE_STATE, timesteps=INFERENCE_TIMESTEPS).to(device)
 try:

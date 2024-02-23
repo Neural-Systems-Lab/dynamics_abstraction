@@ -4,30 +4,39 @@ import torch.nn as nn
 import torch.nn.functional as F
 import sys
 
+import functools
+import matplotlib.pyplot as plt
+from matplotlib import colors
+import matplotlib.patches as patches
+from matplotlib.colors import ListedColormap
+from moviepy.editor import VideoClip
+from moviepy.video.io.bindings import mplfig_to_npimage
+
+
 ###########################################
 # Network with learnable Stories
 ###########################################
 
 MODEL_PARAMS = {
     "input_units": 32,
-    "output_units": 64,
+    "output_units": 32,
     "data_in_dims": 13,
     "data_out_dims": 9,
     "input_timesteps": 20,
     "infer_lr": 0.1,
-    "hyper_lr": 0.0005,
-    "temporal_lr": 0.0005,
+    "hyper_lr": 0.001,
+    "temporal_lr": 0.001,
     "infer_max_iter": 20,
-    "l2_lambda": 0.0,
-    "var_lambda": 1,
-    "center_lambda": 0.001,
-    "hypernet_layers": [256, 256, 256],
+    "l2_lambda": 0.0001,
+    # "var_lambda": 1,
+    # "center_lambda": 0.001,
+    "hypernet_layers": [128, 256, 256],
 
 }
 
 INFER_PARAMS = {
     "input_units": 32,
-    "output_units": 64,
+    "output_units": 32,
     "data_in_dims": 13,
     "data_out_dims": 9,
     "input_timesteps": 25,
@@ -35,9 +44,9 @@ INFER_PARAMS = {
     "hyper_lr": 0.0005,
     "temporal_lr": 0.0005,
     "infer_max_iter": 20,
-    "l2_lambda": 0.0,
-    "var_lambda": 1,
-    "hypernet_layers": [256, 256, 256],
+    "l2_lambda": 0.0001,
+    # "var_lambda": 1,
+    "hypernet_layers": [128, 256, 256],
 
 }
 
@@ -61,7 +70,7 @@ class LearnableEmbedding(nn.Module):
         # Other vars
         self.infer_max_iter = params["infer_max_iter"]
         self.l2_lambda = params["l2_lambda"]
-        self.var_lambda = params["var_lambda"]
+        # self.var_lambda = params["var_lambda"]
 
         # Models
         layers = params["hypernet_layers"]
@@ -110,12 +119,12 @@ class LearnableEmbedding(nn.Module):
             if eval_mode:
                 higher_state_list.append(torch.squeeze(higher_state).detach().cpu().numpy())
         
-        # Find the center of the clusters
+        # Find the center of the higher state clusters for the last step
         cluster_centers = self.cluster_centers(higher_state)
 
         # This is the final weights for this batch of samples
         weights = self.hypernet(higher_state)
-        # print(higher_state_list)
+        # print("Weights : ", weights[0].shape, "Higher states : ", higher_state[0])
         
         # print("Higher states : ", higher_state[0])
         temporal_batched_weights = weights.repeat(self.input_timesteps, 1, 1)
@@ -148,7 +157,8 @@ class LearnableEmbedding(nn.Module):
         
         # Is this optimizer definition correct for batched story?
         # infer_optimizer = torch.optim.SGD([story], self.infer_lr*(1/(timestep+1)))
-        infer_optimizer = torch.optim.SGD([story], self.infer_lr)
+        infer_optimizer = torch.optim.Adam([story], self.infer_lr)
+        # infer_optimizer = torch.optim.SGD([story], self.infer_lr)
         
         hidden = torch.zeros((self.temporal.num_layers, self.batch_size, \
                 self.temporal.hidden_size), device=self.device)
@@ -161,26 +171,28 @@ class LearnableEmbedding(nn.Module):
             # print("Temporal next states : ", predicted_states.shape)
             
             '''
-            # Loss with negative L2 regularization: Incentivize higher distances
+            # Compute Loss.
+            # Check if L2 norm gives better results
+            # Check if variance/STD gives a better result
             '''
-            loss = self.batch_errors(batch_output, predicted_states) - \
-                    self.l2_lambda * torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0) +\
-                    self.var_lambda * torch.sum(torch.var(story, axis=0))
+            loss = self.batch_errors(batch_output, predicted_states) + torch.sum(torch.var(story, axis=0)) +\
+                    self.l2_lambda * torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)
+                    
                 # self.l1_lambda * torch.mean(torch.sum(torch.abs(story), axis=-1), axis=0)
             
             loss.backward()
             infer_optimizer.step()
             infer_optimizer.zero_grad()
-            # self.zero_grad()
+            self.zero_grad()
             # print("backward pass done for step : ", i)
         
-        if self.eval_mode and timestep % 10 == 0:
-            print("Story shape and variance : ", story.shape, torch.mean(torch.var(story, axis=0)))
+        if self.eval_mode and timestep % 20 == 0:
+            print("Story shape and variance(STD) : ", story.shape, torch.sum(torch.std(story, axis=0)))
             print("L2 val : ", torch.mean(torch.sum(torch.pow(story, 2), axis=-1), axis=0)\
                  .detach().cpu().numpy(), "\t Loss : ", loss.detach().cpu().numpy())
             
-        # return story.clone().detach()
-        return story
+        return story.clone().detach()
+        # return story.clone()
 
     def batch_errors(self, true, predicted):  
         err = torch.pow(true-predicted, 2)
@@ -194,6 +206,54 @@ class LearnableEmbedding(nn.Module):
     def batch_init_story(self):
         s = torch.zeros((self.batch_size, self.input_units), requires_grad=True, device=self.device)
         return s
+    
+    def stop_grads(self, params_list):
+        for params in params_list:
+            params.requires_grad = False
+
+    def prediction_video(self, higher_state, policy=None):
+        POMDP = (3, 3)
+        START = (2, 2) 
+        PLOT_TIMESTEPS = 50
+        PLOT_BATCH_SIZE = 100
+        canvas = -np.ones((5, 5)) # Initialize the cells with -1
+        print("center : ", higher_state.shape)
+        higher_state_batched = higher_state.repeat((PLOT_BATCH_SIZE, 1))
+        print("batched center : ", higher_state_batched.shape)
+        weights = self.hypernet(higher_state_batched)
+        print("weights : ", weights.shape)
+        # temporal_weights = weights.repeat((PLOT_TIMESTEPS, 1, 1))
+        # print("temporal weights : ", temporal_weights.shape)
+
+        # Use a batch of random initial states and same actions and average out the predicted states
+        # Generate for each timestep
+        # for timestep in range(PLOT_TIMESTEPS):
+        #     state_input = torch.
+        temporal_input = torch.rand((PLOT_TIMESTEPS, PLOT_BATCH_SIZE, self.data_in_dims), device=self.device)
+        predicted_states = self.temporal(temporal_input, temporal_weights)
+        
+
+    def plot_predictions(self, canvas, cur_state, actions, predictions):
+        
+
+        cmap = colors.ListedColormap(['white', 'black', 'gray'])
+        bounds = [-1,0,1]
+        norm = colors.BoundaryNorm(bounds, cmap.N)
+        fig, ax = plt.subplots()
+
+        ax.xaxis.set_ticklabels([])
+        ax.yaxis.set_ticklabels([])
+        
+        ax.grid(which='major', axis='both', linestyle='-', color='darkgray', linewidth=2)
+        # ax.set_xticks(np.arange(-0.5, 100.5, 1))
+        # ax.set_yticks(np.arange(-0.5, 100.5, 1))
+
+        plt.title("Drawing the Environment with higher states")
+        ax.imshow(predictions, cmap=cmap, norm=norm)
+        
+        return mplfig_to_npimage(fig), cur_state
+        
+
 
 
 ##################################

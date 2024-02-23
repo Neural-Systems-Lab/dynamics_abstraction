@@ -7,6 +7,9 @@ import matplotlib.pyplot as plt
 from matplotlib import colors
 import matplotlib.patches as patches
 from matplotlib.colors import ListedColormap
+from moviepy.editor import VideoClip
+from moviepy.video.io.bindings import mplfig_to_npimage
+
 
 from environments.pomdp_config import *
 
@@ -48,6 +51,9 @@ class CompositionGrid():
 
     def construct_composition(self):
         block_matrix = self.block_config
+        board = np.zeros((self.rows, self.columns))
+        
+
     
     def get_higher_composition(self):
         if self.state == None:
@@ -242,7 +248,7 @@ class CompositionGrid():
         return self.one_hots, self.higher_states
 
 
-    def plot_board(self, board=None, save="../plots/compositional_envs/", name="composition1"):
+    def plot_board(self, board=None, save="../plots/compositional_envs/", name="composition1", return_frame=False):
         plt.clf()
         plt.close()
         if board:
@@ -261,7 +267,10 @@ class CompositionGrid():
 
         plt.title("Environment - "+str(self.config["id"]))
         ax.imshow(_board, cmap=cmap, norm=norm)
-
+        
+        if return_frame:
+            return mplfig_to_npimage(fig)
+        
         plt.savefig(save+name+".png")
         plt.clf()
         plt.close()
