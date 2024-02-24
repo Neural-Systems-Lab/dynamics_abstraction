@@ -27,13 +27,20 @@ from scipy.stats import multivariate_normal
 device = torch.device("cuda")
 BATCH_SIZE = 100
 SAMPLES = 600
-NUM_ENVS = 3
+NUM_ENVS = 5
 N_COMPONENTS = 2
-TIMESTEPS = 5
-PLOT_SAVE_PATH = "/gscratch/rao/vsathish/quals/plots/state_network/"
-MODEL_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_22_run_2_embedding.state"
-PARAMS_PATH = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/feb_22_run_2_embedding.json"
-FILE_SUFFIX = 'feb_22_3'
+TIMESTEPS = 10
+
+date_ = "feb23"
+run_ = 1
+S_dims = 32
+
+ROOT = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/"
+MODEL_PATH = ROOT+date_+"_run_"+str(run_)+"_dims_"+str(S_dims)+"_envs_"+str(NUM_ENVS)+"_embedding.state"
+PARAMS_PATH = ROOT+date_+"_run_"+str(run_)+"_dims_"+str(S_dims)+"_envs_"+str(NUM_ENVS)+"_embedding.json"
+PLOT_SAVE_PATH = "/mmfs1/gscratch/rao/vsathish/quals/plots/state_network/"
+
+
 color_pallette = [
     [0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1],
     [1.0, 0.4980392156862745, 0.054901960784313725, 1],
@@ -170,12 +177,12 @@ def plot_state_cloud(higher_states, tsne=False, episodes=[], save=''):
     
     plt.clf()
     plt.close()
+
     if len(episodes) != 0:
-        print("Plotting Episodic Data")
         episodes_embed = h_embed[-episodes.shape[0]:]
         h_embed = h_embed[:-episodes.shape[0]]
         print(h_embed.shape, episodes_embed.shape)
-        plot_episodic_tsne(higher_states, episodic_embedding=episodes_embed, save=save)
+        # plot_episodic_tsne(higher_states, episodic_embedding=episodes_embed, save=save)
     
     size = len(h_embed)
     split = [i*int(size/NUM_ENVS) for i in range(NUM_ENVS+1)]
@@ -201,6 +208,10 @@ def plot_state_cloud(higher_states, tsne=False, episodes=[], save=''):
         else:
             plt.scatter(x[i], y[i], label="Env "+str(i+1), alpha=0.5)
             plt.legend()
+
+    if len(episodes) != 0:
+        print("Plotting Episodic Data")
+        plot_episodic_tsne(higher_states, episodic_embedding=episodes_embed, save=save)
 
     if tsne:
         plt.title("TSNE of higher latents - embedding method")
@@ -255,7 +266,7 @@ if __name__=="__main__":
     try:
         model_params = json.load(open(PARAMS_PATH, "r"))
         print("################## PARAMS LOADED #################")
-        print(model_params)
+        # print(model_params)
         model = LearnableEmbedding(device, BATCH_SIZE, TIMESTEPS, model_params).to(device)
         model.load_state_dict(torch.load(MODEL_PATH))
         print("Loaded Model")
@@ -266,13 +277,16 @@ if __name__=="__main__":
         model.load_state_dict(torch.load(MODEL_PATH))
 
     # Switch off gradients
-    # for param in model.parameters():
-    #     print(param.shape)
-    #     param.requires_grad = False
+    for param in model.parameters():
+        print(param.shape)
+        param.requires_grad = False
     
-    # # Get data for plotting
-    higher_states = get_viz_data(model)
-    centers = get_state_centers(higher_states)
+    FILE_SUFFIX = 'feb_23_2'
+
+
+    # # # Get data for plotting
+    # higher_states = get_viz_data(model)
+    # centers = get_state_centers(higher_states)
 
     # if 'centers' not in model_params:
     #     model_params['centers'] = centers
@@ -282,9 +296,11 @@ if __name__=="__main__":
     # # Plot the data
     # episodes = plot_episodic_tsne(higher_states, save=FILE_SUFFIX)
     # episodes = get_episodes(higher_states)
-    # plot_state_cloud(higher_states, tsne=True, episodes=episodes, save=FILE_SUFFIX)
+    # plot_state_cloud(higher_states, tsne=False, episodes=episodes, save=FILE_SUFFIX)
 
     # Generate video of predictions
     centers = model_params['centers']
-    center1 = torch.from_numpy(np.array(centers[0])).float().to(device)
-    model.prediction_video(center1)
+    center_ = np.array(centers[4])
+    interesting = (np.array(centers[3]) + np.array(centers[0]))/2
+    center1 = torch.from_numpy(center_).float().to(device)
+    model.predict_states(center1)

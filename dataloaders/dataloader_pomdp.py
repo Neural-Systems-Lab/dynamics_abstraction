@@ -43,6 +43,14 @@ def get_transitions(num_envs, timesteps):
                 next_state, reward, end = env.step(action)
                 # pomdp_state = env.get_pomdp_state()
                 act = ACTIONS[action]
+
+                # Add noise to the state
+                # Flip a random bit in the state with a probability of 0.1
+                if np.random.uniform() < 0.1:
+                    idx0 = np.random.choice(np.where(cur_state == 0)[0])
+                    cur_state[idx0] = 1
+                cur_state = cur_state + np.random.normal(0, 0.2, cur_state.shape)
+
                 trajectory.append((cur_state, np.array(act), next_state))
                 
                 cur_state = next_state

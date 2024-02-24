@@ -12,7 +12,7 @@ import torch.nn.functional as F
 from dataloaders.dataloader_pomdp import generate_data, configs
 from dataloaders.dataloader_pomdp import TRAIN, TEST
 from models.embedding_model import LearnableEmbedding, MODEL_PARAMS
-
+from viz.utils import plot_state_cloud
 
 ###################
 # CONSTANTS
@@ -22,7 +22,7 @@ device = torch.device("cuda")
 # device = torch.device("cpu")
 HYPER_EPOCHS = 100
 BATCH_SIZE = 100
-TIMESTEPS = 15
+TIMESTEPS = 20
 NUM_ENVS = 5
 TRAIN_BATCHES = TRAIN // BATCH_SIZE
 TEST_BATCHES = TEST // BATCH_SIZE
@@ -30,8 +30,8 @@ TEST_BATCHES = TEST // BATCH_SIZE
 '''
 Change filenames during each run
 '''
-date_ = "feb22"
-run_ = 1
+date_ = "feb23"
+run_ = 2
 S_dims = 32
 
 ROOT = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/"
@@ -133,15 +133,16 @@ for epochs in range(HYPER_EPOCHS):
         center_distances_.append(sum(centers_dist_arr)/len(centers_dist_arr))
 
     for i in range(TEST_BATCHES):
-        l1, _, _ = model(test_x1[i], test_y1[i], eval_mode=True) 
-        l2, _, _ = model(test_x2[i], test_y2[i], eval_mode=True)
-        l3, _, _ = model(test_x3[i], test_y3[i], eval_mode=True)
-        l4, _, _ = model(test_x4[i], test_y4[i], eval_mode=True)
-        l5, _, _ = model(test_x5[i], test_y5[i], eval_mode=True)
+        l1, _, higher1 = model(test_x1[i], test_y1[i], eval_mode=True) 
+        l2, _, higher2 = model(test_x2[i], test_y2[i], eval_mode=True)
+        l3, _, higher3 = model(test_x3[i], test_y3[i], eval_mode=True)
+        l4, _, higher4 = model(test_x4[i], test_y4[i], eval_mode=True)
+        l5, _, higher5 = model(test_x5[i], test_y5[i], eval_mode=True)
         # loss = l1+l2+l3+l4
         loss = l1+l2+l3+l4+l5
-        
         test_loss_.append(loss)
+
+        
 
 
     print("Mean Train Loss (Per Step): ", np.mean(train_loss_)/(NUM_ENVS*TIMESTEPS))
@@ -160,8 +161,8 @@ for epochs in range(HYPER_EPOCHS):
         plt.clf()
         plt.close()
         plt.plot(train_loss, label="Train Loss")
-        plt.plot(test_loss, label="Test Loss")
-        plt.plot(center_distances, label="Center Distances")
+        plt.plot(test_loss, label="Val Loss")
+        # plt.plot(center_distances, label="Center Distances")
         plt.legend()
         plt.xlabel("Epochs")
         plt.ylabel("Loss")
