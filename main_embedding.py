@@ -22,8 +22,8 @@ device = torch.device("cuda")
 # device = torch.device("cpu")
 HYPER_EPOCHS = 100
 BATCH_SIZE = 100
-TIMESTEPS = 20
-NUM_ENVS = 5
+TIMESTEPS = 10
+NUM_ENVS = 3
 TRAIN_BATCHES = TRAIN // BATCH_SIZE
 TEST_BATCHES = TEST // BATCH_SIZE
 
@@ -31,7 +31,7 @@ TEST_BATCHES = TEST // BATCH_SIZE
 Change filenames during each run
 '''
 date_ = "feb23"
-run_ = 2
+run_ = 6
 S_dims = 32
 
 ROOT = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/"
@@ -50,13 +50,13 @@ print(PARAMS_PATH)
 # data1, data2 = generate_data(BATCH_SIZE, device)
 # data1, data2, data3, data4, data5 = generate_data(BATCH_SIZE, device, \
 #                                     num_envs=NUM_ENVS, timesteps=TIMESTEPS)
-data1, data2, data3, data4, data5 = generate_data(BATCH_SIZE, device, \
+data1, data2, data3 = generate_data(BATCH_SIZE, device, \
                                     num_envs=NUM_ENVS, timesteps=TIMESTEPS)
 train_x1, train_y1, test_x1, test_y1 = data1
 train_x2, train_y2, test_x2, test_y2 = data2
 train_x3, train_y3, test_x3, test_y3 = data3
-train_x4, train_y4, test_x4, test_y4 = data4
-train_x5, train_y5, test_x5, test_y5 = data5
+# train_x4, train_y4, test_x4, test_y4 = data4
+# train_x5, train_y5, test_x5, test_y5 = data5
 
 ############################
 # MODEL AND OPTIMIZER LOAD
@@ -78,7 +78,7 @@ try:
     print("################## LOAD SUCCESS #################")
 
 except:
-    print("################## NOPE #######################")
+    print("################## TRAINING FROM SCRATCH #######################")
 
 hyper_optim = torch.optim.Adam(model.hypernet.parameters(), model.hyper_lr)
 temporal_optim = torch.optim.Adam(model.temporal.parameters(), model.temporal_lr)
@@ -107,22 +107,24 @@ for epochs in range(HYPER_EPOCHS):
         l1, centers1 = model(train_x1[i], train_y1[i]) 
         l2, centers2 = model(train_x2[i], train_y2[i])
         l3, centers3 = model(train_x3[i], train_y3[i])
-        l4, centers4 = model(train_x4[i], train_y4[i])
-        l5, centers5 = model(train_x5[i], train_y5[i])
+        # l4, centers4 = model(train_x4[i], train_y4[i])
+        # l5, centers5 = model(train_x5[i], train_y5[i])
 
-        center_magnitudes = sum([torch.norm(c) for c in [centers1, centers2, centers3]])
-        # loss = l1+l2+l3+l4
-        loss = l1+l2+l3+l4+l5 #- center_magnitudes
+        center_magnitudes = sum([torch.norm(c) for c in [centers1, centers2]])
+        loss = l1+l2+l3
+        # loss = l1+l2+l3+l4+l5 #- center_magnitudes
         loss.backward()
         hyper_optim.step()
         temporal_optim.step()
         hyper_optim.zero_grad()
         temporal_optim.zero_grad()
 
-        print("i = ", i, "loss = ", loss.detach().cpu().numpy(), \
-              " center_magnitudes = ", center_magnitudes.detach().cpu().numpy())
+        print("i = ", i, "loss for Env 1, 2, ... = ", l1.detach().cpu().numpy(), \
+                l2.detach().cpu().numpy(), l3.detach().cpu().numpy(),\
+                # l4.detach().cpu().numpy(), l5.detach().cpu().numpy(), \
+              "\ncenter_magnitudes = ", center_magnitudes.detach().cpu().numpy())
         
-        centers = [x.detach().cpu().numpy() for x in [centers1, centers2, centers3, centers4, centers5]]
+        centers = [x.detach().cpu().numpy() for x in [centers1, centers2, centers3]]
         train_loss_.append(loss.detach().cpu().numpy())
         centers_dist_arr = []
 
@@ -136,13 +138,17 @@ for epochs in range(HYPER_EPOCHS):
         l1, _, higher1 = model(test_x1[i], test_y1[i], eval_mode=True) 
         l2, _, higher2 = model(test_x2[i], test_y2[i], eval_mode=True)
         l3, _, higher3 = model(test_x3[i], test_y3[i], eval_mode=True)
-        l4, _, higher4 = model(test_x4[i], test_y4[i], eval_mode=True)
-        l5, _, higher5 = model(test_x5[i], test_y5[i], eval_mode=True)
+        # l4, _, higher4 = model(test_x4[i], test_y4[i], eval_mode=True)
+        # l5, _, higher5 = model(test_x5[i], test_y5[i], eval_mode=True)
         # loss = l1+l2+l3+l4
-        loss = l1+l2+l3+l4+l5
+        loss = l1+l2+l3#+l4+l5
         test_loss_.append(loss)
 
-        
+        if epochs % 10 == 0 and i == 0:
+            print("Plotting PCA cloud ...")
+            higher_list = np.array([higher1, higher2, higher3])
+            centers = plot_state_cloud(higher_list, tsne=False, envs=NUM_ENVS, save="feb_23_3")
+
 
 
     print("Mean Train Loss (Per Step): ", np.mean(train_loss_)/(NUM_ENVS*TIMESTEPS))
@@ -155,9 +161,13 @@ for epochs in range(HYPER_EPOCHS):
     if (epochs+1) % 10 == 0 and epochs != 0:
         print("Saving Checkpoint ... ")
 
-        torch.save(model.state_dict(), MODEL_PATH)
-        json.dump(model_params, open(PARAMS_PATH, "w"))
+        model_params["train_loss"] = train_loss
+        model_params["test_loss"] = test_loss
+        model_params["center_distances"] = center_distances
 
+        torch.save(model.state_dict(), MODEL_PATH)
+        json.dump(model_params, open(PARAMS_PATH, "w"), indent=4)
+        
         plt.clf()
         plt.close()
         plt.plot(train_loss, label="Train Loss")

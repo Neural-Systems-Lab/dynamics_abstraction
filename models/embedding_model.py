@@ -27,10 +27,10 @@ MODEL_PARAMS = {
     "hyper_lr": 0.001,
     "temporal_lr": 0.001,
     "infer_max_iter": 20,
-    "l2_lambda": 0.0001,
-    "var_lambda": 0.01,
+    "l2_lambda": 1e-3,
+    "var_lambda": 0.2,
     # "center_lambda": 0.001,
-    "hypernet_layers": [128, 256, 256],
+    "hypernet_layers": [128, 128, 128],
 
 }
 
@@ -270,7 +270,7 @@ class LearnableEmbedding(nn.Module):
 
     def predict_states(self, higher_state, policy=None):
 
-        PLOT_TIMESTEPS = 240
+        PLOT_TIMESTEPS = 500
         PLOT_BATCH_SIZE = 100
         FPS = 10
         canvas = np.ones((5, 5)) # Initialize the cells with walls
@@ -328,6 +328,11 @@ class LearnableEmbedding(nn.Module):
             action_ = np.random.choice(actions)
             current_state = self.take_step(current_state, action_, canvas)
 
+            if timestep % 20 == 0:
+                current_state = (2, 2)
+                hidden = torch.zeros((self.temporal.num_layers, self.batch_size, \
+                            self.temporal.hidden_size), device=self.device)
+
             # Plot and get the frame
             cur_frame, canvas = self.plot_predictions(canvas, current_state, patch.cpu().numpy(), timestep)
 
@@ -351,7 +356,7 @@ class LearnableEmbedding(nn.Module):
         
         # Generate the video
         # clip = VideoClip(lambda t: env_frames[int(t)], duration=PLOT_TIMESTEPS)
-        clip = ImageSequenceClip(env_frames, fps=24)
+        clip = ImageSequenceClip(env_frames, fps=15)
         clip.write_videofile("/mmfs1/gscratch/rao/vsathish/quals/plots/patch_predictions/"+"patch_predictions.mp4")
         # clip.write_gif("/mmfs1/gscratch/rao/vsathish/quals/plots/patch_predictions/"+"patch_predictions.gif", fps=20)
         
@@ -359,13 +364,17 @@ class LearnableEmbedding(nn.Module):
     def plot_predictions(self, canvas, cur_state, predictions, t):
         
         # Updated canvas
-        alpha = 0.93
+        alpha = 0.9
+        alpha2 = 0.9
         x, y = cur_state[0]-1, cur_state[1]-1
         # canvas[cur_state] = 0
         for i in range(3):
             for j in range(3):
                 if x+i >= 0 and x+i < 5 and y+j >= 0 and y+j < 5:
-                    canvas[x+i, y+j] = alpha*canvas[x+i, y+j] + (1-alpha)*predictions[i, j]
+                    if predictions[i, j] < 0.5:
+                        canvas[x+i, y+j] = alpha2*canvas[x+i, y+j] + (1-alpha2)*predictions[i, j]
+                    else:
+                        canvas[x+i, y+j] = alpha*canvas[x+i, y+j] + (1-alpha)*predictions[i, j]
         
         print(canvas)
 
@@ -394,7 +403,6 @@ class LearnableEmbedding(nn.Module):
 
         return mplfig_to_npimage(fig), canvas
         
-
 
 
 ##################################

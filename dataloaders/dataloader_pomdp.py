@@ -26,8 +26,8 @@ TEST = 200
 TRAJECTORIES = TRAIN + TEST
 DEFAULT_STEPS = 25
 
-configs = [c1, c2, c3, c4, c5]
-# configs = [c1, c3, c4]
+configs = [c1, c2, c3, c4, c5, c6]
+# configs = [c1, c2, c3, c6]
 # print(configs)
 def get_transitions(num_envs, timesteps):
     datasets = []
@@ -44,7 +44,7 @@ def get_transitions(num_envs, timesteps):
                 # pomdp_state = env.get_pomdp_state()
                 act = ACTIONS[action]
 
-                # Add noise to the state
+                # Add noise to the input state
                 # Flip a random bit in the state with a probability of 0.1
                 if np.random.uniform() < 0.1:
                     idx0 = np.random.choice(np.where(cur_state == 0)[0])

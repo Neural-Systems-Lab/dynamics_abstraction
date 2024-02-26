@@ -16,24 +16,26 @@ import torch.optim as optim
 import torch.nn.functional as F
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
+from scipy.stats import multivariate_normal
+
 
 from models.embedding_model import LearnableEmbedding, INFER_PARAMS
 from dataloaders.dataloader_pomdp import generate_data, configs
+from viz.reconstruction import Reconstructions
 from environments.env import SimpleGridEnvironment
 from environments.composition import CompositionGrid
 from environments.pomdp_config import *
-from scipy.stats import multivariate_normal
 
 device = torch.device("cuda")
 BATCH_SIZE = 100
 SAMPLES = 600
-NUM_ENVS = 5
+NUM_ENVS = 3
 N_COMPONENTS = 2
-TIMESTEPS = 10
+TIMESTEPS = 50
 
 date_ = "feb23"
-run_ = 1
-S_dims = 32
+run_ = 6
+S_dims = 8
 
 ROOT = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/"
 MODEL_PATH = ROOT+date_+"_run_"+str(run_)+"_dims_"+str(S_dims)+"_envs_"+str(NUM_ENVS)+"_embedding.state"
@@ -46,7 +48,12 @@ color_pallette = [
     [1.0, 0.4980392156862745, 0.054901960784313725, 1],
     [0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1],
     [0.8392156862745098, 0.15294117647058825, 0.1568627450980392, 1],
-    [0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1]
+    [0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1],
+    [0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1],
+    [0.8901960784313725, 0.4666666666666667, 0.7607843137254902, 1],
+    [0.4980392156862745, 0.4980392156862745, 0.4980392156862745, 1],
+    [0.7372549019607844, 0.7411764705882353, 0.13333333333333333, 1],
+    [0.09019607843137255, 0.7450980392156863, 0.8117647058823529, 1]
 
 ]
 
@@ -55,10 +62,10 @@ def get_viz_data(model):
     higher_list = []
     assert len(data) == NUM_ENVS
 
-    for data_ in data:
+    for i, data_ in enumerate(data):
         train_x, train_y, _, _ = data_
         loss, _, higher = model(train_x[0], train_y[0], eval_mode=True)
-        print("Loss: ", loss.item())
+        print(f"#### Loss for env {i} : #####", loss.item())
         higher_list.append(np.array(higher))
     
     return higher_list
@@ -149,14 +156,14 @@ def plot_episodic_tsne(higher_states, episodic_embedding=None, save=''):
     print("plot_success")
     return episodes
 
-def plot_state_cloud(higher_states, tsne=False, episodes=[], save=''):
+def plot_state_cloud(higher_states, tsne=False, episodes=[], envs=NUM_ENVS, save=''):
     # If episodic is given, we plot that with the cloud
-    assert len(higher_states) == NUM_ENVS
+    assert len(higher_states) == envs
 
     higher_points = []
     print(len(higher_states), higher_states[0].shape)
     
-    for i in range(NUM_ENVS):
+    for i in range(envs):
         higher_points.append(higher_states[i][-1])
     
     if len(episodes) != 0:
@@ -185,12 +192,12 @@ def plot_state_cloud(higher_states, tsne=False, episodes=[], save=''):
         # plot_episodic_tsne(higher_states, episodic_embedding=episodes_embed, save=save)
     
     size = len(h_embed)
-    split = [i*int(size/NUM_ENVS) for i in range(NUM_ENVS+1)]
+    split = [i*int(size/envs) for i in range(envs+1)]
     x, y = [], []
-    if NUM_ENVS == 3:
+    if envs == 3:
         x, y, z = [], [], []
 
-    for i in range(NUM_ENVS):
+    for i in range(envs):
         m, n = split[i], split[i+1]
         x.append(h_embed[m:n, 0])
         y.append(h_embed[m:n, 1])
@@ -202,7 +209,7 @@ def plot_state_cloud(higher_states, tsne=False, episodes=[], save=''):
         plot_3d(x, y, z)
         return
 
-    for i in range(NUM_ENVS):
+    for i in range(envs):
         if len(episodes) != 0:
             plt.scatter(x[i], y[i], label="Env "+str(i+1), alpha=0.3)
         else:
@@ -281,26 +288,29 @@ if __name__=="__main__":
         print(param.shape)
         param.requires_grad = False
     
-    FILE_SUFFIX = 'feb_23_2'
+    FILE_SUFFIX = 'feb_24_1'
 
 
-    # # # Get data for plotting
-    # higher_states = get_viz_data(model)
-    # centers = get_state_centers(higher_states)
+    # # Get data for plotting
+    higher_states = get_viz_data(model)
+    centers = get_state_centers(higher_states)
 
-    # if 'centers' not in model_params:
-    #     model_params['centers'] = centers
-    #     with open(PARAMS_PATH, "w") as f:
-    #         json.dump(model_params, f)
+    if 'centers' not in model_params:
+        model_params['centers'] = centers
+        with open(PARAMS_PATH, "w") as f:
+            json.dump(model_params, f, indent=4)
     
-    # # Plot the data
-    # episodes = plot_episodic_tsne(higher_states, save=FILE_SUFFIX)
-    # episodes = get_episodes(higher_states)
-    # plot_state_cloud(higher_states, tsne=False, episodes=episodes, save=FILE_SUFFIX)
+    # Plot the data
+    episodes = plot_episodic_tsne(higher_states, save=FILE_SUFFIX)
+    episodes = get_episodes(higher_states)
+    plot_state_cloud(higher_states, tsne=True, episodes=episodes, envs=NUM_ENVS, save=FILE_SUFFIX)
 
     # Generate video of predictions
+    recon = Reconstructions(model, device, BATCH_SIZE)
     centers = model_params['centers']
-    center_ = np.array(centers[4])
-    interesting = (np.array(centers[3]) + np.array(centers[0]))/2
-    center1 = torch.from_numpy(center_).float().to(device)
-    model.predict_states(center1)
+
+    alpha = 1
+    intepolation = alpha * np.array(centers[0]) + (1-alpha) * np.array(centers[1])
+    center1 = torch.from_numpy(intepolation).float().to(device)
+    
+    recon.predict_states(center1)
