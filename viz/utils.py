@@ -19,29 +19,31 @@ from sklearn.decomposition import PCA
 from scipy.stats import multivariate_normal
 
 
-from models.embedding_model import LearnableEmbedding, INFER_PARAMS
+# from models.embedding_model import LearnableEmbedding, INFER_PARAMS
+from models.embedding_ce import LearnableEmbedding, MODEL_PARAMS
 from dataloaders.dataloader_pomdp import generate_data, configs
-from viz.reconstruction import Reconstructions
+from viz.token_reconstruct import Reconstructions
 from environments.env import SimpleGridEnvironment
 from environments.composition import CompositionGrid
 from environments.pomdp_config import *
 
 device = torch.device("cuda")
 BATCH_SIZE = 100
-SAMPLES = 600
-NUM_ENVS = 3
+# SAMPLES = 600
+NUM_ENVS = 2
 N_COMPONENTS = 2
-TIMESTEPS = 50
+TIMESTEPS = 5
 
-date_ = "feb23"
-run_ = 6
-S_dims = 8
+date_ = "mar2"
+run_ = 1010
+S_dims = 32
 
 ROOT = "/mmfs1/gscratch/rao/vsathish/quals/saved_models/state_network/"
 MODEL_PATH = ROOT+date_+"_run_"+str(run_)+"_dims_"+str(S_dims)+"_envs_"+str(NUM_ENVS)+"_embedding.state"
 PARAMS_PATH = ROOT+date_+"_run_"+str(run_)+"_dims_"+str(S_dims)+"_envs_"+str(NUM_ENVS)+"_embedding.json"
 PLOT_SAVE_PATH = "/mmfs1/gscratch/rao/vsathish/quals/plots/state_network/"
 
+# env = SimpleGridEnvironment(config=c1)
 
 color_pallette = [
     [0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1],
@@ -66,6 +68,7 @@ def get_viz_data(model):
         train_x, train_y, _, _ = data_
         loss, _, higher = model(train_x[0], train_y[0], eval_mode=True)
         print(f"#### Loss for env {i} : #####", loss.item())
+        # print(f"#### Higher for env {i} : #####", higher[0].shape, train_x[0].shape, train_y[0].shape)
         higher_list.append(np.array(higher))
     
     return higher_list
@@ -98,7 +101,7 @@ def plot_episodic_tsne(higher_states, episodic_embedding=None, save=''):
     # assert len(higher_states) == NUM_ENVS
     
     episodes = get_episodes(higher_states)
-    episodic_tsne = TSNE(n_components=N_COMPONENTS, perplexity=3)
+    episodic_tsne = TSNE(n_components=N_COMPONENTS, perplexity=6)
     if episodic_embedding is None:
         print("Embedding episodic data from scratch")
         episodic_embedding = episodic_tsne.fit_transform(episodes)
@@ -156,7 +159,7 @@ def plot_episodic_tsne(higher_states, episodic_embedding=None, save=''):
     print("plot_success")
     return episodes
 
-def plot_state_cloud(higher_states, tsne=False, episodes=[], envs=NUM_ENVS, save=''):
+def plot_state_cloud(higher_states, tsne=False, episodes=[], interpolate=[], envs=NUM_ENVS, save=''):
     # If episodic is given, we plot that with the cloud
     assert len(higher_states) == envs
 
@@ -168,6 +171,15 @@ def plot_state_cloud(higher_states, tsne=False, episodes=[], envs=NUM_ENVS, save
     
     if len(episodes) != 0:
         higher_points.append(episodes)
+
+    # if len(interpolate) != 0:
+    #     interpolate_arr = []
+    #     alphas = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    #     c1, c2, = interpolate[0], interpolate[1]
+    #     for a in alphas:
+    #         interpolate_arr.append(a * np.array(c1) + (1-a) * np.array(c2))
+    #     print(interpolate_arr[0].shape)
+    #     higher_points.append(np.array(interpolate_arr))
 
     h_concat = np.concatenate(higher_points, axis=0)
     if tsne:
@@ -184,6 +196,9 @@ def plot_state_cloud(higher_states, tsne=False, episodes=[], envs=NUM_ENVS, save
     
     plt.clf()
     plt.close()
+
+    # if len(interpolate) != 0:
+    #     interpolated = 
 
     if len(episodes) != 0:
         episodes_embed = h_embed[-episodes.shape[0]:]
@@ -280,7 +295,7 @@ if __name__=="__main__":
 
     except:
         print("################## USING DEFAULT PARAMS #################")
-        model = LearnableEmbedding(device, BATCH_SIZE, TIMESTEPS, INFER_PARAMS).to(device)
+        model = LearnableEmbedding(device, BATCH_SIZE, TIMESTEPS, MODEL_PARAMS).to(device)
         model.load_state_dict(torch.load(MODEL_PATH))
 
     # Switch off gradients
@@ -288,10 +303,10 @@ if __name__=="__main__":
         print(param.shape)
         param.requires_grad = False
     
-    FILE_SUFFIX = 'feb_24_1'
+    FILE_SUFFIX = 'mar_2_2'
 
 
-    # # Get data for plotting
+    # Get data for plotting
     higher_states = get_viz_data(model)
     centers = get_state_centers(higher_states)
 
@@ -303,14 +318,14 @@ if __name__=="__main__":
     # Plot the data
     episodes = plot_episodic_tsne(higher_states, save=FILE_SUFFIX)
     episodes = get_episodes(higher_states)
-    plot_state_cloud(higher_states, tsne=True, episodes=episodes, envs=NUM_ENVS, save=FILE_SUFFIX)
+    plot_state_cloud(higher_states, tsne=False, episodes=[], envs=NUM_ENVS, save=FILE_SUFFIX)
 
     # Generate video of predictions
     recon = Reconstructions(model, device, BATCH_SIZE)
-    centers = model_params['centers']
+    # centers = model_params['centers']
 
-    alpha = 1
+    alpha = 0.38
     intepolation = alpha * np.array(centers[0]) + (1-alpha) * np.array(centers[1])
-    center1 = torch.from_numpy(intepolation).float().to(device)
+    center_ = torch.from_numpy(np.array(intepolation)).float().to(device)
     
-    recon.predict_states(center1)
+    # recon.predict_states(center_) 

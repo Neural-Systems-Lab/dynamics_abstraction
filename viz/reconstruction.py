@@ -26,7 +26,7 @@ class Reconstructions:
         
 
     def predict_states(self, higher_state):
-
+        
         PLOT_TIMESTEPS = 500
         PLOT_BATCH_SIZE = 100
         FPS = 10

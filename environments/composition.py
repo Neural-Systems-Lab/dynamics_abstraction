@@ -36,12 +36,13 @@ class CompositionGrid():
         # print(self.rows, self.columns)
         self.state = None
         self.goal = None
+        self.state_type = "one_hot"
 
         # Find walls and valid positions in the grid
         self.walls = self.wall_finder()
         
         # Map each position to a reference framed one hot
-        # self.one_hots, self.higher_states = self.map_pos_to_one_hot()
+        self.one_hots = self.map_pos_to_one_hot()
         self.higher_states, self.composition_states, self.subgoal_states = self.map_higher_states()
 
         print(self.higher_states, "\n\n")
@@ -245,7 +246,7 @@ class CompositionGrid():
                         counter += 1
                 higher_state_counter += 1
         
-        return self.one_hots, self.higher_states
+        return self.one_hots#, self.higher_states
 
 
     def plot_board(self, board=None, save="../plots/compositional_envs/", name="composition1", return_frame=False):

@@ -27,6 +27,7 @@ class SimpleGridEnvironment:
         self.abs_action = abstract_action
         self.current_subgoal = goal
         self.episode_end = False
+        self.return_onehot = False
 
         self.valid_start_positions = []
         for i in range(self.rows):
@@ -36,16 +37,9 @@ class SimpleGridEnvironment:
                     self.valid_start_positions.append((i, j))
     
 
-        # self.one_hot_mapping = {}
-        # counter = 0
-        # for i in range(self.rows):
-        #     for j in range(self.cols):
-
-        #         one_hot = np.zeros((self.rows*self.cols))
-        #         one_hot[counter] = 1
-        #         self.one_hot_mapping[(i, j)] = one_hot
-                
-        #         counter +=1
+        # Get the one hot mapping for each state
+        self.one_hot_mapping = self.one_hot_states()
+        self.inverted_one_hot = {int(np.argmax(v)):k for k, v in self.one_hot_mapping.items()}
 
         # Add walls and goal state to canvas
         for x ,y in self.walls:
@@ -55,6 +49,21 @@ class SimpleGridEnvironment:
         # Each step is (s, a, s', r)
         self.historic_data = []
         self.episode_data = []
+
+    def one_hot_states(self):
+        one_hot_mapping = {}
+        counter = 0
+        for i in range(self.rows):
+            for j in range(self.cols):
+
+                one_hot = np.zeros((self.rows*self.cols))
+                one_hot[counter] = 1
+                one_hot_mapping[(i, j)] = one_hot
+                
+                counter +=1
+
+        return one_hot_mapping
+
 
     def change_subgoal(self, newgoal):
         x, y = newgoal
@@ -69,7 +78,7 @@ class SimpleGridEnvironment:
         return self.board
 
 
-    def reset(self, start_position=None):
+    def reset(self, start_position=None, return_onehot=False):
         # reset to some valid start state
         # Store and reset all the episodic variables
         if len(self.episode_data) > 0:
@@ -79,28 +88,35 @@ class SimpleGridEnvironment:
         self.steps_count = 0
         
         # Give start state else random start
-        # if start_position != None:
-        #     try:
-        #         assert start_position != self.current_subgoal
-        #         self.state = start_position
+        if start_position != None:
+            try:
+                assert start_position != self.current_subgoal
+                self.state = start_position
                 
-        #     except:
-        #         print(f"Start State {start_position} is the same as goal state! Starting randomly")
-        #         idx = np.random.randint(0, len(self.valid_start_positions))
-        #         self.state = self.valid_start_positions[idx]
+            except:
+                print(f"Start State {start_position} is the same as goal state! Starting randomly")
+                idx = np.random.randint(0, len(self.valid_start_positions))
+                self.state = self.valid_start_positions[idx]
         
-        # else:
-        idx = np.random.randint(0, len(self.valid_start_positions))
-        self.state = self.valid_start_positions[idx]
+        else:
+            idx = np.random.randint(0, len(self.valid_start_positions))
+            self.state = self.valid_start_positions[idx]
     
         self.episode_end = False
-        return self.get_pomdp_state()
+        # print(self.state)
+        if return_onehot:
+            return self.one_hot_mapping[self.state]
+        else:
+            return self.get_pomdp_state()
     
     
-    def step(self, action, track_end=False):
+    def step(self, action, track_end=False, return_onehot=False):
         
         if track_end and self.episode_end:
-            return self.get_pomdp_state(), 0, 0
+            if return_onehot:
+                return self.one_hot_mapping[self.state], 0, 0
+            else:
+                return self.get_pomdp_state(), 0, 0
             
         next_state = self.next_position(action)
         reward, end = self.reward_function(next_state)
@@ -112,7 +128,10 @@ class SimpleGridEnvironment:
         self.state = next_state
         
         # return self.one_hot_mapping[self.state].flatten(), reward, end
-        return self.get_pomdp_state(), reward, end
+        if return_onehot:
+            return self.one_hot_mapping[self.state], reward, end
+        else:
+            return self.get_pomdp_state(), reward, end
         
     def next_position(self, action):
         # print(action)

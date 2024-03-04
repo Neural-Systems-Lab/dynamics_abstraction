@@ -20,17 +20,17 @@ from moviepy.video.io.bindings import mplfig_to_npimage
 MODEL_PARAMS = {
     "input_units": 32,
     "output_units": 16,
-    "data_in_dims": 13,
-    "data_out_dims": 9,
+    "data_in_dims": 29,
+    "data_out_dims": 25,
     "input_timesteps": 20,
     "infer_lr": 0.1,
-    "hyper_lr": 0.001,
-    "temporal_lr": 0.001,
+    "hyper_lr": 0.005,
+    "temporal_lr": 0.005,
     "infer_max_iter": 20,
     "l2_lambda": 1e-3,
-    "var_lambda": 0.2,
+    "var_lambda": 0.1,
     # "center_lambda": 0.001,
-    "hypernet_layers": [128, 128, 128],
+    "hypernet_layers": [256, 256, 128],
 
 }
 
@@ -140,14 +140,15 @@ class LearnableEmbedding(nn.Module):
         # print("shapes : ", temporal_batch_input.shape, temporal_batch_output.shape, weights.shape)
 
         predicted_states = self.temporal(temporal_batch_input, temporal_batched_weights)
-        # print("###### predicted states : ", predicted_states[-1][0])
-        # print("###### actual states : ", temporal_batch_output[-1][0])
+        # for i in range(len(predicted_states)):
+        print("###### predicted states : ", torch.argmax(predicted_states[-1][0]))
+        print("###### actual states : ", torch.argmax(temporal_batch_output[-1][0]))
 
         errors = torch.pow(predicted_states-temporal_batch_output, 2)
-        # print(errors.shape)
+        # print(errors)
         errors = torch.sum(torch.sum(errors, axis=-1), axis=0)
-        # print(errors.shape)
-        errors = torch.mean(errors)
+        # errors = torch.mean(errors)
+        errors = torch.sum(errors)
         
         if eval_mode:
             return errors.detach().cpu().numpy(), \
@@ -221,187 +222,187 @@ class LearnableEmbedding(nn.Module):
         for params in params_list:
             params.requires_grad = False
 
-    def get_possible_actions(self, canvas, current_state):
+    # def get_possible_actions(self, canvas, current_state):
 
-        possible_actions = []
-        next_states = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-        for i, action in enumerate(next_states):
-            x, y = current_state[0]+action[0], current_state[1]+action[1]
-            if x < 0 or x > 4 or y < 0 or y > 4:
-                continue
-            if canvas[x,y] < 0.5:
-                possible_actions.append(i)
+    #     possible_actions = []
+    #     next_states = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    #     for i, action in enumerate(next_states):
+    #         x, y = current_state[0]+action[0], current_state[1]+action[1]
+    #         if x < 0 or x > 4 or y < 0 or y > 4:
+    #             continue
+    #         if canvas[x,y] < 0.5:
+    #             possible_actions.append(i)
         
-        print("Possible actions : ", [self.action_map[i] for i in possible_actions], possible_actions)
+    #     print("Possible actions : ", [self.action_map[i] for i in possible_actions], possible_actions)
         
-        if len(possible_actions) == 0:
-            print("No possible actions, returning random action")
-            return [np.random.choice([0, 1, 2, 3])]
-        return possible_actions
+    #     if len(possible_actions) == 0:
+    #         print("No possible actions, returning random action")
+    #         return [np.random.choice([0, 1, 2, 3])]
+    #     return possible_actions
     
-    def take_step(self, current_state, action, canvas):
-        print("##### TAKING a step ... ######")
-        print("Current state : ", current_state)
-        print("Action : ", action)
-        print("Canvas : ")
-        print(canvas)
+    # def take_step(self, current_state, action, canvas):
+    #     print("##### TAKING a step ... ######")
+    #     print("Current state : ", current_state)
+    #     print("Action : ", action)
+    #     print("Canvas : ")
+    #     print(canvas)
 
-        next_state = current_state
-        if action == 0:
-            next_state = (current_state[0]-1, current_state[1])
-        elif action == 1:
-            next_state = (current_state[0]+1, current_state[1])
-        elif action == 2:
-            next_state = (current_state[0], current_state[1]-1)
-        elif action == 3:
-            next_state = (current_state[0], current_state[1]+1)
+    #     next_state = current_state
+    #     if action == 0:
+    #         next_state = (current_state[0]-1, current_state[1])
+    #     elif action == 1:
+    #         next_state = (current_state[0]+1, current_state[1])
+    #     elif action == 2:
+    #         next_state = (current_state[0], current_state[1]-1)
+    #     elif action == 3:
+    #         next_state = (current_state[0], current_state[1]+1)
         
-        if next_state[0] < 0 or next_state[0] > 4 or next_state[1] < 0 or next_state[1] > 4:
-            print("Crossing borders, returning same state ...")
-            return current_state
-        elif canvas[next_state] > 0.5:
-            print("Hitting a wall, returning same state ...")
-            # if np.random.uniform() > 0.95:
-            #     return next_state
-            return current_state
-        else:
-            print("Next state : ", next_state)
-            return next_state
+    #     if next_state[0] < 0 or next_state[0] > 4 or next_state[1] < 0 or next_state[1] > 4:
+    #         print("Crossing borders, returning same state ...")
+    #         return current_state
+    #     elif canvas[next_state] > 0.5:
+    #         print("Hitting a wall, returning same state ...")
+    #         # if np.random.uniform() > 0.95:
+    #         #     return next_state
+    #         return current_state
+    #     else:
+    #         print("Next state : ", next_state)
+    #         return next_state
 
-    def predict_states(self, higher_state, policy=None):
+    # def predict_states(self, higher_state, policy=None):
 
-        PLOT_TIMESTEPS = 500
-        PLOT_BATCH_SIZE = 100
-        FPS = 10
-        canvas = np.ones((5, 5)) # Initialize the cells with walls
-        current_state = (2, 2) # Start from the center
-        '''
-        Hidden :  torch.Size([1, 100, 32])
-        Weights :  torch.Size([100, 32])
-        Batched Inputs torch.Size([100, 13])
-        '''
+    #     PLOT_TIMESTEPS = 500
+    #     PLOT_BATCH_SIZE = 100
+    #     FPS = 10
+    #     canvas = np.ones((5, 5)) # Initialize the cells with walls
+    #     current_state = (2, 2) # Start from the center
+    #     '''
+    #     Hidden :  torch.Size([1, 100, 32])
+    #     Weights :  torch.Size([100, 32])
+    #     Batched Inputs torch.Size([100, 13])
+    #     '''
 
-        print("center : ", higher_state.shape)
-        higher_state_batched = higher_state.repeat((PLOT_BATCH_SIZE, 1))
-        weights = self.hypernet(higher_state_batched)
-        print("weights : ", weights.shape)
-
-
-        # Use a batch of random initial states and same actions and average out the predicted states
-        # Generate for each timestep
+    #     print("center : ", higher_state.shape)
+    #     higher_state_batched = higher_state.repeat((PLOT_BATCH_SIZE, 1))
+    #     weights = self.hypernet(higher_state_batched)
+    #     print("weights : ", weights.shape)
 
 
-        hidden = torch.zeros((self.temporal.num_layers, self.batch_size, \
-                self.temporal.hidden_size), device=self.device)
-        print("hidden : ", hidden.shape)
+    #     # Use a batch of random initial states and same actions and average out the predicted states
+    #     # Generate for each timestep
 
-        batched_init_state = torch.randint(0, 2, (PLOT_BATCH_SIZE, self.data_in_dims-4)).float()
-        random_action = F.one_hot(torch.randint(0, 4, (1,)), num_classes=4).repeat(PLOT_BATCH_SIZE, 1)
-        batch_input = torch.cat([batched_init_state, random_action], dim=1).float().to(self.device)
 
-        print("Batched Inputs", batch_input.shape)
+    #     hidden = torch.zeros((self.temporal.num_layers, self.batch_size, \
+    #             self.temporal.hidden_size), device=self.device)
+    #     print("hidden : ", hidden.shape)
+
+    #     batched_init_state = torch.randint(0, 2, (PLOT_BATCH_SIZE, self.data_in_dims-4)).float()
+    #     random_action = F.one_hot(torch.randint(0, 4, (1,)), num_classes=4).repeat(PLOT_BATCH_SIZE, 1)
+    #     batch_input = torch.cat([batched_init_state, random_action], dim=1).float().to(self.device)
+
+    #     print("Batched Inputs", batch_input.shape)
         
-        predicted_state_list = [torch.mean(batched_init_state, axis=0).view(3, 3).cpu().numpy()]
-        action_list = [np.argmax(random_action[0].cpu().numpy())]
-        patch_pos_list = [current_state]
+    #     predicted_state_list = [torch.mean(batched_init_state, axis=0).view(3, 3).cpu().numpy()]
+    #     action_list = [np.argmax(random_action[0].cpu().numpy())]
+    #     patch_pos_list = [current_state]
 
-        # Get the empty frame
-        # cur_frame, canvas = self.plot_predictions(canvas, current_state, predicted_state_list[0], 0)
-        env_frames = []
-        print("Initial canvas")
-        print(canvas)
-        for timestep in range(PLOT_TIMESTEPS):
+    #     # Get the empty frame
+    #     # cur_frame, canvas = self.plot_predictions(canvas, current_state, predicted_state_list[0], 0)
+    #     env_frames = []
+    #     print("Initial canvas")
+    #     print(canvas)
+    #     for timestep in range(PLOT_TIMESTEPS):
             
-            print("Timestep : ", timestep)
+    #         print("Timestep : ", timestep)
 
-            # Predict the next state
-            hidden = hidden.detach()
-            predicted_states, hidden = self.temporal.forward_inference(batch_input, weights, hidden)
-            predicted_ = torch.round(torch.mean(predicted_states, axis=0))
-            patch = predicted_.view(3, 3)
-            print("Predicted states : ", predicted_.shape)
-            print(patch)
+    #         # Predict the next state
+    #         hidden = hidden.detach()
+    #         predicted_states, hidden = self.temporal.forward_inference(batch_input, weights, hidden)
+    #         predicted_ = torch.round(torch.mean(predicted_states, axis=0))
+    #         patch = predicted_.view(3, 3)
+    #         print("Predicted states : ", predicted_.shape)
+    #         print(patch)
 
-            # Get the next action and update canvas state
-            # actions = self.get_possible_actions(canvas, current_state)
-            actions = [0, 1, 2, 3]
-            action_ = np.random.choice(actions)
-            current_state = self.take_step(current_state, action_, canvas)
+    #         # Get the next action and update canvas state
+    #         # actions = self.get_possible_actions(canvas, current_state)
+    #         actions = [0, 1, 2, 3]
+    #         action_ = np.random.choice(actions)
+    #         current_state = self.take_step(current_state, action_, canvas)
 
-            if timestep % 20 == 0:
-                current_state = (2, 2)
-                hidden = torch.zeros((self.temporal.num_layers, self.batch_size, \
-                            self.temporal.hidden_size), device=self.device)
+    #         if timestep % 20 == 0:
+    #             current_state = (2, 2)
+    #             hidden = torch.zeros((self.temporal.num_layers, self.batch_size, \
+    #                         self.temporal.hidden_size), device=self.device)
 
-            # Plot and get the frame
-            cur_frame, canvas = self.plot_predictions(canvas, current_state, patch.cpu().numpy(), timestep)
+    #         # Plot and get the frame
+    #         cur_frame, canvas = self.plot_predictions(canvas, current_state, patch.cpu().numpy(), timestep)
 
-            # Update the patch data
-            env_frames.append(cur_frame)
-            action_list.append(action_)
-            predicted_state_list.append(patch.cpu().numpy())
-            patch_pos_list.append(current_state)
+    #         # Update the patch data
+    #         env_frames.append(cur_frame)
+    #         action_list.append(action_)
+    #         predicted_state_list.append(patch.cpu().numpy())
+    #         patch_pos_list.append(current_state)
 
 
-            # Prepare the data for next step
-            # Add some small noise to the predicted state
-            action_one_hot = F.one_hot(torch.tensor(action_), num_classes=4).float().to(self.device)
-            action_one_hot = action_one_hot.repeat(PLOT_BATCH_SIZE, 1)
-            predicted_ = predicted_ + (0.5-torch.randn_like(predicted_))*0.25
-            predicted_ = predicted_.repeat((PLOT_BATCH_SIZE, 1))
+    #         # Prepare the data for next step
+    #         # Add some small noise to the predicted state
+    #         action_one_hot = F.one_hot(torch.tensor(action_), num_classes=4).float().to(self.device)
+    #         action_one_hot = action_one_hot.repeat(PLOT_BATCH_SIZE, 1)
+    #         predicted_ = predicted_ + (0.5-torch.randn_like(predicted_))*0.25
+    #         predicted_ = predicted_.repeat((PLOT_BATCH_SIZE, 1))
             
-            batch_input = torch.cat([action_one_hot, predicted_], dim=1)
-            print("Batched Inputs", batch_input.shape)
-            self.zero_grad()
+    #         batch_input = torch.cat([action_one_hot, predicted_], dim=1)
+    #         print("Batched Inputs", batch_input.shape)
+    #         self.zero_grad()
         
-        # Generate the video
-        # clip = VideoClip(lambda t: env_frames[int(t)], duration=PLOT_TIMESTEPS)
-        clip = ImageSequenceClip(env_frames, fps=15)
-        clip.write_videofile("/mmfs1/gscratch/rao/vsathish/quals/plots/patch_predictions/"+"patch_predictions.mp4")
-        # clip.write_gif("/mmfs1/gscratch/rao/vsathish/quals/plots/patch_predictions/"+"patch_predictions.gif", fps=20)
+    #     # Generate the video
+    #     # clip = VideoClip(lambda t: env_frames[int(t)], duration=PLOT_TIMESTEPS)
+    #     clip = ImageSequenceClip(env_frames, fps=15)
+    #     clip.write_videofile("/mmfs1/gscratch/rao/vsathish/quals/plots/patch_predictions/"+"patch_predictions.mp4")
+    #     # clip.write_gif("/mmfs1/gscratch/rao/vsathish/quals/plots/patch_predictions/"+"patch_predictions.gif", fps=20)
         
 
-    def plot_predictions(self, canvas, cur_state, predictions, t):
+    # def plot_predictions(self, canvas, cur_state, predictions, t):
         
-        # Updated canvas
-        alpha = 0.9
-        alpha2 = 0.9
-        x, y = cur_state[0]-1, cur_state[1]-1
-        # canvas[cur_state] = 0
-        for i in range(3):
-            for j in range(3):
-                if x+i >= 0 and x+i < 5 and y+j >= 0 and y+j < 5:
-                    if predictions[i, j] < 0.5:
-                        canvas[x+i, y+j] = alpha2*canvas[x+i, y+j] + (1-alpha2)*predictions[i, j]
-                    else:
-                        canvas[x+i, y+j] = alpha*canvas[x+i, y+j] + (1-alpha)*predictions[i, j]
+    #     # Updated canvas
+    #     alpha = 0.9
+    #     alpha2 = 0.9
+    #     x, y = cur_state[0]-1, cur_state[1]-1
+    #     # canvas[cur_state] = 0
+    #     for i in range(3):
+    #         for j in range(3):
+    #             if x+i >= 0 and x+i < 5 and y+j >= 0 and y+j < 5:
+    #                 if predictions[i, j] < 0.5:
+    #                     canvas[x+i, y+j] = alpha2*canvas[x+i, y+j] + (1-alpha2)*predictions[i, j]
+    #                 else:
+    #                     canvas[x+i, y+j] = alpha*canvas[x+i, y+j] + (1-alpha)*predictions[i, j]
         
-        print(canvas)
+    #     print(canvas)
 
-        # Now plot
-        plt.clf()
-        plt.close()
+    #     # Now plot
+    #     plt.clf()
+    #     plt.close()
 
-        # cmap = colors.ListedColormap(['black', 'gray'])
-        # bounds = [0, 0.6]
-        # norm = colors.BoundaryNorm(bounds, cmap.N)
+    #     # cmap = colors.ListedColormap(['black', 'gray'])
+    #     # bounds = [0, 0.6]
+    #     # norm = colors.BoundaryNorm(bounds, cmap.N)
         
-        fig, ax = plt.subplots()
-        ax.xaxis.set_ticklabels([])
-        ax.yaxis.set_ticklabels([])
-        ax.grid(which='major', axis='both', linestyle='-', color='darkgray', linewidth=1)
-        ax.set_xticks(np.arange(-0.5, 100.5, 1))
-        ax.set_yticks(np.arange(-0.5, 100.5, 1))
+    #     fig, ax = plt.subplots()
+    #     ax.xaxis.set_ticklabels([])
+    #     ax.yaxis.set_ticklabels([])
+    #     ax.grid(which='major', axis='both', linestyle='-', color='darkgray', linewidth=1)
+    #     ax.set_xticks(np.arange(-0.5, 100.5, 1))
+    #     ax.set_yticks(np.arange(-0.5, 100.5, 1))
 
-        plt.title("Drawing the Environment with higher states")
-        ax.imshow(canvas, cmap='gray', vmin=0, vmax=2)
-        x, y = cur_state[0]-1, cur_state[1]-1
-        rect = patches.Rectangle((y-0.5, x-0.5), 3, 3, linewidth=2, edgecolor='r', facecolor='none', alpha=0.8)
-        ax.add_patch(rect)
-        # ax.imshow(canvas, cmap=cmap, norm=norm)
-        # plt.savefig("/mmfs1/gscratch/rao/vsathish/quals/plots/patch_predictions/"+str(t)+".png")
+    #     plt.title("Drawing the Environment with higher states")
+    #     ax.imshow(canvas, cmap='gray', vmin=0, vmax=2)
+    #     x, y = cur_state[0]-1, cur_state[1]-1
+    #     rect = patches.Rectangle((y-0.5, x-0.5), 3, 3, linewidth=2, edgecolor='r', facecolor='none', alpha=0.8)
+    #     ax.add_patch(rect)
+    #     # ax.imshow(canvas, cmap=cmap, norm=norm)
+    #     # plt.savefig("/mmfs1/gscratch/rao/vsathish/quals/plots/patch_predictions/"+str(t)+".png")
 
-        return mplfig_to_npimage(fig), canvas
+    #     return mplfig_to_npimage(fig), canvas
         
 
 
@@ -429,8 +430,8 @@ class LowerRNN(nn.Module):
         # self.decoder2 = nn.Linear(self.decoder_size, self.output_shape)
         self.decoder = nn.Linear(self.hidden_size, self.output_shape)
         self.decoder1 = nn.Linear(128, 128)
-        self.decoder2 = nn.Linear(128, 64)
-        self.decoder3 = nn.Linear(64, self.output_shape)
+        # self.decoder2 = nn.Linear(128, 128)
+        self.decoder3 = nn.Linear(128, self.output_shape)
 
     # Batch forward
     def forward(self, inputs, weights):
@@ -439,8 +440,8 @@ class LowerRNN(nn.Module):
         out, _ = self.rnn(inp)
         # output = F.relu(self.decoder(out))
         output = F.relu(self.decoder3(\
-                        F.relu(self.decoder2(\
-                            F.relu(self.decoder1(out))))))
+                        # F.relu(self.decoder2(\
+                            F.relu(self.decoder1(out))))
         return output    
 
     def forward_inference(self, batch_input, weights, hidden):
@@ -450,23 +451,7 @@ class LowerRNN(nn.Module):
         out, h = self.rnn(inp, hidden)
         # output = torch.squeeze(F.relu(self.decoder(out)))
         output = F.relu(self.decoder3(\
-                        F.relu(self.decoder2(\
-                            F.relu(self.decoder1(out))))))
+                        # F.relu(self.decoder2(\
+                            F.relu(self.decoder1(out))))
         output = torch.squeeze(output)
         return output, h
-
-MODEL_PARAMS_OLD = {
-    "input_units": 4,
-    "output_units": 32,
-    "data_in_dims": 13,
-    "data_out_dims": 9,
-    "input_timesteps": 25,
-    "infer_lr": 0.1,
-    "hyper_lr": 0.0005,
-    "temporal_lr": 0.0005,
-    "infer_max_iter": 20,
-    "l2_lambda": 0.00001,
-
-    "hypernet_layers": [128, 64, 64],
-
-}

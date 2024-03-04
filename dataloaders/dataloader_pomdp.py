@@ -15,16 +15,17 @@ from environments.env import SimpleGridEnvironment
 Data is of the format : [(state, action, next_state), (state, action, next_state), ...]
 '''
 
-ACTIONS = {0:[0, 0, 0, 1],
-           1:[0, 0, 1, 0],
-           2:[0, 1, 0, 0],
-           3:[1, 0, 0, 0]
+ACTIONS = {0:[1, 0, 0, 0],
+           1:[0, 1, 0, 0],
+           2:[0, 0, 1, 0],
+           3:[0, 0, 0, 1]
            }
 
 TRAIN = 600
 TEST = 200
 TRAJECTORIES = TRAIN + TEST
 DEFAULT_STEPS = 25
+START_POS = (2, 2)
 
 configs = [c1, c2, c3, c4, c5, c6]
 # configs = [c1, c2, c3, c6]
@@ -35,29 +36,30 @@ def get_transitions(num_envs, timesteps):
         env = SimpleGridEnvironment(config=config, goal=(2, 0))
         env.plot_board()
         dataset = []
-        cur_state = env.reset()
+        cur_state = env.reset(start_position=START_POS, return_onehot=True)
         for _ in range(TRAJECTORIES):
             trajectory = []
             for s in range(timesteps):
                 action = random.randint(0, 3)
-                next_state, reward, end = env.step(action)
+                next_state, reward, end = env.step(action, return_onehot=True)
                 # pomdp_state = env.get_pomdp_state()
-                act = ACTIONS[action]
+                act = np.zeros(4)
+                act[action] = 1
 
                 # Add noise to the input state
                 # Flip a random bit in the state with a probability of 0.1
-                if np.random.uniform() < 0.1:
-                    idx0 = np.random.choice(np.where(cur_state == 0)[0])
-                    cur_state[idx0] = 1
-                cur_state = cur_state + np.random.normal(0, 0.2, cur_state.shape)
+                # if np.random.uniform() < 0.1:
+                #     idx0 = np.random.choice(np.where(cur_state == 0)[0])
+                #     cur_state[idx0] = 1
+                # cur_state = cur_state + np.random.normal(0, 0.2, cur_state.shape)
 
                 trajectory.append((cur_state, np.array(act), next_state))
-                
+                # print(np.argmax(cur_state))
                 cur_state = next_state
             # sys.exit(0)
             dataset.append(trajectory)
-            cur_state = env.reset()
-    
+            cur_state = env.reset(start_position=START_POS, return_onehot=True)
+            
         datasets.append(dataset)
     return datasets
 
